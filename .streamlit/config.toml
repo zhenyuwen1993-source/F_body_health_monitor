@@ -1,0 +1,8 @@
+# Streamlit configuration for this project.
+[server]
+# Skip the first-run onboarding email prompt; open http://localhost:8501 yourself.
+headless = true
+
+[browser]
+# No telemetry — this is a local, private health-data app.
+gatherUsageStats = false

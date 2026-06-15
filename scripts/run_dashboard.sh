@@ -2,4 +2,5 @@
 # Start the Streamlit dashboard.
 set -euo pipefail
 cd "$(dirname "$0")/.."
-streamlit run dashboard/app.py
+PY=".venv/bin/python"; [ -x "$PY" ] || PY="python3"
+"$PY" -m streamlit run dashboard/app.py

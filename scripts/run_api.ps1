@@ -2,4 +2,6 @@
 $ErrorActionPreference = "Stop"
 $root = Split-Path -Parent $PSScriptRoot
 Set-Location $root
-python -m health_monitor.api
+$py = Join-Path $root ".venv\Scripts\python.exe"
+if (-not (Test-Path $py)) { $py = "python" }
+& $py -m health_monitor.api
