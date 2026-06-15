@@ -1,0 +1,36 @@
+# --- Privacy: never commit personal health data ---
+data/*
+!data/.gitkeep
+*.db
+*.db-wal
+*.db-shm
+export.xml
+export_cda.xml
+apple_health_export/
+*.zip
+
+# --- Environment / secrets ---
+.env
+.streamlit/secrets.toml
+
+# --- Python ---
+__pycache__/
+*.py[cod]
+*.egg-info/
+.eggs/
+build/
+dist/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# --- Virtual envs ---
+.venv/
+venv/
+env/
+
+# --- Editors / OS ---
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db

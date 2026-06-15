@@ -1,0 +1,2 @@
+# Keeps the data/ directory in git. The SQLite database and any exported health
+# files live here and are gitignored — your health data never leaves this machine.
