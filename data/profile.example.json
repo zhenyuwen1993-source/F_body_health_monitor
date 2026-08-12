@@ -1,0 +1,8 @@
+{
+  "birth_datetime": "1992-05-18 08:30",
+  "sex": "男",
+  "birth_place": "城市（可选）",
+  "display_name": "Zhenyu",
+  "bazi_manual": null,
+  "notes": "复制为 data/profile.json 并改成你的真实生辰。八字仅作传统文化/作息参考。"
+}

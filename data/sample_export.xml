@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE HealthData [
+<!ELEMENT HealthData (ExportDate,Me,Record*,Correlation*,Workout*,ActivitySummary*)>
+]>
+<HealthData locale="zh_CN">
+ <ExportDate value="2026-08-03 12:00:00 +0800"/>
+ <Me HKCharacteristicTypeIdentifierDateOfBirth="1990-01-01" HKCharacteristicTypeIdentifierBiologicalSex="HKBiologicalSexMale" HKCharacteristicTypeIdentifierBloodType="HKBloodTypeNotSet" HKCharacteristicTypeIdentifierFitzpatrickSkinType="HKFitzpatrickSkinTypeNotSet"/>
+ <Record type="HKQuantityTypeIdentifierStepCount" sourceName="Demo Watch" unit="count" creationDate="2026-08-02 20:00:00 +0800" startDate="2026-08-02 08:00:00 +0800" endDate="2026-08-02 20:00:00 +0800" value="9200"/>
+ <Record type="HKQuantityTypeIdentifierStepCount" sourceName="Demo Watch" unit="count" creationDate="2026-08-01 20:00:00 +0800" startDate="2026-08-01 08:00:00 +0800" endDate="2026-08-01 20:00:00 +0800" value="7500"/>
+ <Record type="HKQuantityTypeIdentifierStepCount" sourceName="Demo Watch" unit="count" creationDate="2026-07-31 20:00:00 +0800" startDate="2026-07-31 08:00:00 +0800" endDate="2026-07-31 20:00:00 +0800" value="11000"/>
+ <Record type="HKQuantityTypeIdentifierDistanceWalkingRunning" sourceName="Demo Watch" unit="m" creationDate="2026-08-02 20:00:00 +0800" startDate="2026-08-02 08:00:00 +0800" endDate="2026-08-02 20:00:00 +0800" value="6500"/>
+ <Record type="HKQuantityTypeIdentifierActiveEnergyBurned" sourceName="Demo Watch" unit="kcal" creationDate="2026-08-02 20:00:00 +0800" startDate="2026-08-02 08:00:00 +0800" endDate="2026-08-02 20:00:00 +0800" value="480"/>
+ <Record type="HKQuantityTypeIdentifierActiveEnergyBurned" sourceName="Demo Watch" unit="kcal" creationDate="2026-08-01 20:00:00 +0800" startDate="2026-08-01 08:00:00 +0800" endDate="2026-08-01 20:00:00 +0800" value="390"/>
+ <Record type="HKQuantityTypeIdentifierAppleExerciseTime" sourceName="Demo Watch" unit="min" creationDate="2026-08-02 20:00:00 +0800" startDate="2026-08-02 08:00:00 +0800" endDate="2026-08-02 20:00:00 +0800" value="35"/>
+ <Record type="HKCategoryTypeIdentifierAppleStandHour" sourceName="Demo Watch" creationDate="2026-08-02 10:00:00 +0800" startDate="2026-08-02 09:00:00 +0800" endDate="2026-08-02 10:00:00 +0800" value="HKCategoryValueAppleStandHourStood"/>
+ <Record type="HKCategoryTypeIdentifierAppleStandHour" sourceName="Demo Watch" creationDate="2026-08-02 11:00:00 +0800" startDate="2026-08-02 10:00:00 +0800" endDate="2026-08-02 11:00:00 +0800" value="HKCategoryValueAppleStandHourStood"/>
+ <Record type="HKQuantityTypeIdentifierHeartRate" sourceName="Demo Watch" unit="count/min" creationDate="2026-08-02 12:00:00 +0800" startDate="2026-08-02 12:00:00 +0800" endDate="2026-08-02 12:00:00 +0800" value="72"/>
+ <Record type="HKQuantityTypeIdentifierHeartRate" sourceName="Demo Watch" unit="count/min" creationDate="2026-08-02 18:00:00 +0800" startDate="2026-08-02 18:00:00 +0800" endDate="2026-08-02 18:00:00 +0800" value="88"/>
+ <Record type="HKQuantityTypeIdentifierRestingHeartRate" sourceName="Demo Watch" unit="count/min" creationDate="2026-08-02 08:00:00 +0800" startDate="2026-08-02 00:00:00 +0800" endDate="2026-08-02 23:59:00 +0800" value="58"/>
+ <Record type="HKQuantityTypeIdentifierRestingHeartRate" sourceName="Demo Watch" unit="count/min" creationDate="2026-08-01 08:00:00 +0800" startDate="2026-08-01 00:00:00 +0800" endDate="2026-08-01 23:59:00 +0800" value="60"/>
+ <Record type="HKQuantityTypeIdentifierHeartRateVariabilitySDNN" sourceName="Demo Watch" unit="ms" creationDate="2026-08-02 07:00:00 +0800" startDate="2026-08-02 07:00:00 +0800" endDate="2026-08-02 07:00:00 +0800" value="45"/>
+ <Record type="HKQuantityTypeIdentifierHeartRateVariabilitySDNN" sourceName="Demo Watch" unit="ms" creationDate="2026-08-01 07:00:00 +0800" startDate="2026-08-01 07:00:00 +0800" endDate="2026-08-01 07:00:00 +0800" value="40"/>
+ <Record type="HKQuantityTypeIdentifierOxygenSaturation" sourceName="Demo Watch" unit="%" creationDate="2026-08-02 07:05:00 +0800" startDate="2026-08-02 07:05:00 +0800" endDate="2026-08-02 07:05:00 +0800" value="0.98"/>
+ <Record type="HKCategoryTypeIdentifierSleepAnalysis" sourceName="Demo Watch" creationDate="2026-08-02 07:30:00 +0800" startDate="2026-08-01 23:30:00 +0800" endDate="2026-08-02 01:00:00 +0800" value="HKCategoryValueSleepAnalysisAsleepCore"/>
+ <Record type="HKCategoryTypeIdentifierSleepAnalysis" sourceName="Demo Watch" creationDate="2026-08-02 07:30:00 +0800" startDate="2026-08-02 01:00:00 +0800" endDate="2026-08-02 02:00:00 +0800" value="HKCategoryValueSleepAnalysisAsleepDeep"/>
+ <Record type="HKCategoryTypeIdentifierSleepAnalysis" sourceName="Demo Watch" creationDate="2026-08-02 07:30:00 +0800" startDate="2026-08-02 02:00:00 +0800" endDate="2026-08-02 03:30:00 +0800" value="HKCategoryValueSleepAnalysisAsleepREM"/>
+ <Record type="HKCategoryTypeIdentifierSleepAnalysis" sourceName="Demo Watch" creationDate="2026-08-02 07:30:00 +0800" startDate="2026-08-02 03:30:00 +0800" endDate="2026-08-02 07:00:00 +0800" value="HKCategoryValueSleepAnalysisAsleepCore"/>
+ <Record type="HKCategoryTypeIdentifierStateOfMind" sourceName="Demo iPhone" creationDate="2026-08-02 21:00:00 +0800" startDate="2026-08-02 21:00:00 +0800" endDate="2026-08-02 21:00:00 +0800" value="HKCategoryValueStateOfMindValencePleasant">
+  <MetadataEntry key="HKStateOfMindValence" value="pleasant"/>
+ </Record>
+ <Record type="HKQuantityTypeIdentifierBodyMass" sourceName="Demo iPhone" unit="kg" creationDate="2026-08-02 08:00:00 +0800" startDate="2026-08-02 08:00:00 +0800" endDate="2026-08-02 08:00:00 +0800" value="70.5"/>
+ <Record type="HKCategoryTypeIdentifierMindfulSession" sourceName="Demo iPhone" creationDate="2026-08-02 22:00:00 +0800" startDate="2026-08-02 21:40:00 +0800" endDate="2026-08-02 22:00:00 +0800" value="HKCategoryValueNotApplicable"/>
+ <Workout workoutActivityType="HKWorkoutActivityTypeRunning" duration="32" durationUnit="min" totalDistance="5.2" totalDistanceUnit="km" totalEnergyBurned="310" totalEnergyBurnedUnit="kcal" sourceName="Demo Watch" creationDate="2026-08-02 19:00:00 +0800" startDate="2026-08-02 18:20:00 +0800" endDate="2026-08-02 18:52:00 +0800"/>
+ <ActivitySummary dateComponents="2026-08-02" activeEnergyBurned="480" activeEnergyBurnedGoal="500" appleExerciseTime="35" appleExerciseTimeGoal="30" appleStandHours="10" appleStandHoursGoal="12"/>
+</HealthData>
