@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import AiAnalysis from "@/components/dashboard/AiAnalysis";
 import Chat from "@/components/dashboard/Chat";
 import Gauge from "@/components/dashboard/Gauge";
 import MetricCard from "@/components/dashboard/MetricCard";
@@ -89,6 +90,14 @@ export default function DashboardView({
         level={summary.level}
         date={today.date}
       />
+
+      {/* AI's cross-metric read, streaming in behind the instant summary. */}
+      <section className="mt-5">
+        <h2 className="mb-3 text-base font-semibold text-zinc-900 dark:text-zinc-50">
+          AI 深度解读
+        </h2>
+        <AiAnalysis context={context} />
+      </section>
 
       {/* The three headline numbers, each with a plain-language label. */}
       <section className="mt-8">
