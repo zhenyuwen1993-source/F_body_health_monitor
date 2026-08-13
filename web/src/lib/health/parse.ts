@@ -106,6 +106,22 @@ export async function parseHealthXml(
   file: Blob,
   onProgress?: (p: ParseProgress) => void,
 ): Promise<ParseResult> {
+  return parseHealthXmlStream(
+    file.stream() as ReadableStream<Uint8Array>,
+    file.size || 0,
+    onProgress,
+  );
+}
+
+/**
+ * Parse export.xml from a byte stream. `totalBytes` is only used to report
+ * progress; pass 0 when the length isn't known.
+ */
+export async function parseHealthXmlStream(
+  stream: ReadableStream<Uint8Array>,
+  totalBytes = 0,
+  onProgress?: (p: ParseProgress) => void,
+): Promise<ParseResult> {
   const records: HealthRecord[] = [];
   const workouts: WorkoutRecord[] = [];
   let birthYear: number | undefined;
@@ -176,11 +192,11 @@ export async function parseHealthXml(
     }
   };
 
-  const total = file.size || 0;
+  const total = totalBytes;
   let bytesRead = 0;
   let buffer = "";
   const decoder = new TextDecoder("utf-8");
-  const reader = (file.stream() as ReadableStream<Uint8Array>).getReader();
+  const reader = stream.getReader();
   let sinceProgress = 0;
 
   for (;;) {

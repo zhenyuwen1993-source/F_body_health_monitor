@@ -23,13 +23,6 @@ export default function DashboardPage() {
   const [dragOver, setDragOver] = useState(false);
 
   const handleFile = useCallback(async (file: File) => {
-    if (file.name.toLowerCase().endsWith(".zip")) {
-      setError(
-        "请先把 export.zip 解压，拖入里面的 export.xml（浏览器端 zip 解压将在后续版本支持）。",
-      );
-      setPhase("error");
-      return;
-    }
     setPhase("parsing");
     setError(null);
     setProgress(null);
@@ -69,8 +62,9 @@ export default function DashboardPage() {
           上传你的 Apple Health 数据
         </h1>
         <p className="mt-3 max-w-md text-sm leading-6 text-zinc-500">
-          健康 App → 头像 → 导出所有健康数据 → 得到 <code>导出.zip</code>，解压后把里面的{" "}
-          <code>export.xml</code> 拖进来。全部在你浏览器本地解析，<b>不会上传到服务器</b>。
+          健康 App → 头像 → 导出所有健康数据 → 把得到的 <code>导出.zip</code>{" "}
+          直接拖进来（也可以拖解压后的 <code>export.xml</code>）。全部在你浏览器本地解析，
+          <b>不会上传到服务器</b>。
         </p>
       </div>
 
@@ -93,12 +87,12 @@ export default function DashboardPage() {
           </svg>
         </div>
         <span className="text-sm font-medium text-zinc-700 dark:text-zinc-200">
-          点击选择或拖入 export.xml
+          点击选择或拖入 导出.zip / export.xml
         </span>
         <span className="text-xs text-zinc-400">支持较大文件（流式解析，不占满内存）</span>
         <input
           type="file"
-          accept=".xml,text/xml,application/xml"
+          accept=".zip,.xml,text/xml,application/xml,application/zip"
           className="hidden"
           onChange={(e) => {
             const f = e.target.files?.[0];

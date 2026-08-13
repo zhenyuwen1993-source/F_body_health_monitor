@@ -1,20 +1,46 @@
-// Public entry point: turn an export.xml File into a ready-to-render dataset.
+// Public entry point: turn an Apple Health export into a ready-to-render
+// dataset. Accepts either the raw export.xml or the export.zip straight from
+// the Health app.
 
 import { aggregateDaily } from "./aggregate";
 import { enrich } from "./metrics";
-import { parseHealthXml, type ParseProgress } from "./parse";
+import { parseHealthXmlStream, type ParseProgress, type ParseResult } from "./parse";
 import type { HealthDataset } from "./types";
+import { listZipEntries, openZipEntry, pickHealthXml } from "./zip";
 
 export type { HealthDataset } from "./types";
 export type { DailyMetrics, WorkoutRecord } from "./types";
 export type { ParseProgress } from "./parse";
 export { buildContext } from "./context";
 
+function isZip(file: Blob & { name?: string }): boolean {
+  return (file.name ?? "").toLowerCase().endsWith(".zip");
+}
+
 export async function buildDataset(
-  file: Blob,
+  file: Blob & { name?: string },
   onProgress?: (p: ParseProgress) => void,
 ): Promise<HealthDataset> {
-  const parsed = await parseHealthXml(file, onProgress);
+  let parsed: ParseResult;
+
+  if (isZip(file)) {
+    const entries = await listZipEntries(file);
+    const entry = pickHealthXml(entries);
+    if (!entry) {
+      throw new Error(
+        "这个 zip 里没找到 export.xml。请确认是健康 App 导出的「导出.zip」。",
+      );
+    }
+    const stream = await openZipEntry(file, entry);
+    parsed = await parseHealthXmlStream(stream, entry.uncompressedSize, onProgress);
+  } else {
+    parsed = await parseHealthXmlStream(
+      file.stream() as ReadableStream<Uint8Array>,
+      file.size || 0,
+      onProgress,
+    );
+  }
+
   const daily = enrich(aggregateDaily(parsed.records), parsed.workouts);
   const dateRange =
     daily.length > 0
