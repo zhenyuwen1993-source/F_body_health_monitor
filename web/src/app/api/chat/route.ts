@@ -5,6 +5,8 @@
 // OpenAI-compatible chat-completions protocol. The model can be overridden with
 // AI_MODEL without touching the code. Keys never reach the client.
 
+import { DAILY_AI_LIMIT, consumeQuota, currentUserId } from "@/lib/auth";
+import { dbConfigured } from "@/lib/db";
 import { clientIp, rateLimit, sameOrigin } from "@/lib/ratelimit";
 
 export const runtime = "nodejs";
@@ -74,6 +76,30 @@ export async function POST(req: Request) {
     return Response.json(
       { error: `提问太频繁了，请 ${Math.ceil(limit.retryAfter / 60)} 分钟后再试。` },
       { status: 429, headers: { "Retry-After": String(limit.retryAfter) } },
+    );
+  }
+
+  // Each question costs money, so it must belong to an account with quota left.
+  // Without a database there's no way to meter, so the feature stays closed
+  // rather than open to everyone.
+  if (!dbConfigured()) {
+    return Response.json(
+      { error: "AI 问答暂时不可用（服务器未连接数据库）。" },
+      { status: 503 },
+    );
+  }
+  const userId = await currentUserId();
+  if (!userId) {
+    return Response.json(
+      { error: "请先登录再提问。", needAuth: true },
+      { status: 401 },
+    );
+  }
+  const quota = await consumeQuota(userId);
+  if (!quota) {
+    return Response.json(
+      { error: `今天的 ${DAILY_AI_LIMIT} 次提问已经用完了，明天再来吧。` },
+      { status: 429 },
     );
   }
 
