@@ -14,6 +14,30 @@ const COOKIE = "sh_session";
 const MAX_AGE_S = 30 * 24 * 60 * 60; // 30 days
 export const DAILY_AI_LIMIT = 10;
 
+/** Owners listed in ADMIN_EMAILS get a bigger allowance and the /admin page. */
+export function isAdminEmail(email: string): boolean {
+  const raw = process.env.ADMIN_EMAILS ?? "";
+  if (!raw.trim()) return false;
+  const set = new Set(
+    raw
+      .split(",")
+      .map((e) => e.trim().toLowerCase())
+      .filter(Boolean),
+  );
+  return set.has(email.trim().toLowerCase());
+}
+
+function adminLimit(): number {
+  const n = Number(process.env.ADMIN_AI_LIMIT);
+  return Number.isFinite(n) && n > 0 ? n : 200;
+}
+
+/** The daily AI allowance for one account. */
+export async function limitForUser(userId: number): Promise<number> {
+  const user = await getUser(userId);
+  return user && isAdminEmail(user.email) ? adminLimit() : DAILY_AI_LIMIT;
+}
+
 function secret(): string {
   // Falls back to the DB URL so sessions still sign in preview environments
   // where no explicit secret was set; both are server-only values.
@@ -126,12 +150,13 @@ export interface Quota {
 
 export async function getQuota(userId: number): Promise<Quota> {
   await ensureSchema();
+  const limit = await limitForUser(userId);
   const res = await db().query<{ count: number }>(
     "SELECT count FROM ai_usage WHERE user_id = $1 AND day = CURRENT_DATE",
     [userId],
   );
   const used = res.rows[0]?.count ?? 0;
-  return { used, limit: DAILY_AI_LIMIT, remaining: Math.max(0, DAILY_AI_LIMIT - used) };
+  return { used, limit, remaining: Math.max(0, limit - used) };
 }
 
 /**
@@ -141,14 +166,23 @@ export async function getQuota(userId: number): Promise<Quota> {
  */
 export async function consumeQuota(userId: number): Promise<Quota | null> {
   await ensureSchema();
+  const limit = await limitForUser(userId);
   const res = await db().query<{ count: number }>(
     `INSERT INTO ai_usage (user_id, day, count) VALUES ($1, CURRENT_DATE, 1)
      ON CONFLICT (user_id, day) DO UPDATE SET count = ai_usage.count + 1
      WHERE ai_usage.count < $2
      RETURNING count`,
-    [userId, DAILY_AI_LIMIT],
+    [userId, limit],
   );
   if (res.rows.length === 0) return null;
   const used = res.rows[0].count;
-  return { used, limit: DAILY_AI_LIMIT, remaining: Math.max(0, DAILY_AI_LIMIT - used) };
+  return { used, limit, remaining: Math.max(0, limit - used) };
+}
+
+/** True when the signed-in account is an owner. */
+export async function currentUserIsAdmin(): Promise<boolean> {
+  const id = await currentUserId();
+  if (!id) return false;
+  const user = await getUser(id);
+  return !!user && isAdminEmail(user.email);
 }

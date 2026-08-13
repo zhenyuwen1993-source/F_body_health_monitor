@@ -5,6 +5,7 @@ import { useState } from "react";
 export interface SessionUser {
   id: number;
   email: string;
+  isAdmin?: boolean;
 }
 export interface QuotaInfo {
   used: number;

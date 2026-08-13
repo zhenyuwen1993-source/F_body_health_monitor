@@ -13,6 +13,7 @@ import {
   findUserByEmail,
   getQuota,
   getUser,
+  isAdminEmail,
   verifyPassword,
 } from "@/lib/auth";
 import { clientIp, rateLimit, sameOrigin } from "@/lib/ratelimit";
@@ -28,7 +29,10 @@ export async function GET() {
   try {
     const user = await getUser(id);
     if (!user) return Response.json({ user: null });
-    return Response.json({ user, quota: await getQuota(id) });
+    return Response.json({
+      user: { ...user, isAdmin: isAdminEmail(user.email) },
+      quota: await getQuota(id),
+    });
   } catch {
     return Response.json({ user: null });
   }

@@ -66,6 +66,14 @@ export default function Shell({
 
           <div className="mt-6 space-y-1 border-t border-zinc-200 pt-4 dark:border-zinc-800">
             <p className="truncate px-3 text-[11px] text-zinc-400">{user.email}</p>
+            {user.isAdmin && (
+              <a
+                href="/admin"
+                className="block rounded-lg px-3 py-1.5 text-xs text-zinc-500 hover:bg-zinc-100 dark:hover:bg-zinc-800"
+              >
+                后台
+              </a>
+            )}
             <button
               onClick={onReset}
               className="w-full rounded-lg px-3 py-1.5 text-left text-xs text-zinc-500 hover:bg-zinc-100 dark:hover:bg-zinc-800"
@@ -103,6 +111,11 @@ export default function Shell({
           {menuOpen && (
             <div className="mb-3 space-y-1 rounded-lg border border-zinc-200 p-2 text-xs dark:border-zinc-800">
               <p className="truncate px-2 text-zinc-400">{user.email}</p>
+              {user.isAdmin && (
+                <a href="/admin" className="block rounded px-2 py-1 text-zinc-600 hover:bg-zinc-100 dark:text-zinc-300 dark:hover:bg-zinc-800">
+                  后台
+                </a>
+              )}
               <button
                 onClick={onReset}
                 className="w-full rounded px-2 py-1 text-left text-zinc-600 hover:bg-zinc-100 dark:text-zinc-300 dark:hover:bg-zinc-800"
