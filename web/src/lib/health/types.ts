@@ -84,6 +84,16 @@ export interface DailyMetrics {
   tsb?: number; // training stress balance (form)
 }
 
+/** Personal baselines (medians over the whole history) used for comparisons. */
+export interface Baselines {
+  sleep?: number;
+  hrv?: number;
+  rhr?: number;
+  steps?: number;
+  active?: number;
+  exercise?: number;
+}
+
 /** The full parsed dataset, ready for the dashboard. */
 export interface HealthDataset {
   daily: DailyMetrics[]; // sorted ascending by date
@@ -91,6 +101,7 @@ export interface HealthDataset {
   recordCount: number;
   workoutCount: number;
   dateRange: { start: string; end: string } | null;
+  baselines: Baselines;
   birthYear?: number;
   sex?: string;
 }

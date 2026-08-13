@@ -3,7 +3,7 @@
 // Ported from src/metrics/{training_load,readiness,triad,compute}.py.
 
 import { minutesFromMidnight } from "./aggregate";
-import type { DailyMetrics, WorkoutRecord } from "./types";
+import type { Baselines, DailyMetrics, WorkoutRecord } from "./types";
 
 const clamp = (v: number, lo = 0, hi = 100) => Math.min(hi, Math.max(lo, v));
 const round = (v: number, dp = 0) => {
@@ -134,8 +134,11 @@ function scoreFromBaseline(
 
 // --- Main enrichment ---------------------------------------------------------
 
-export function enrich(daily: DailyMetrics[], workouts: WorkoutRecord[]): DailyMetrics[] {
-  if (!daily.length) return daily;
+export function enrich(
+  daily: DailyMetrics[],
+  workouts: WorkoutRecord[],
+): { daily: DailyMetrics[]; baselines: Baselines } {
+  if (!daily.length) return { daily, baselines: {} };
   const loadByDay = dailyLoad(workouts);
 
   // training load per day
@@ -257,7 +260,7 @@ export function enrich(daily: DailyMetrics[], workouts: WorkoutRecord[]): DailyM
     d.sleep_consistency = cons != null ? round(cons, 1) : undefined;
   });
 
-  return daily;
+  return { daily, baselines: base };
 }
 
 function nn<T>(x: T | undefined | null): x is T {

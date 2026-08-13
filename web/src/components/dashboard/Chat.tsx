@@ -8,10 +8,10 @@ interface Msg {
 }
 
 const SUGGESTIONS = [
-  "我今天适合练什么强度？",
-  "最近两周我的恢复趋势怎么样？",
-  "我的睡眠有什么问题，怎么改？",
-  "我现在是训练不足还是过量？",
+  "用大白话讲讲我今天的状态",
+  "我最近睡得好吗？怎么改善？",
+  "我今天适合去运动吗？",
+  "我的数据里有什么需要注意的？",
 ];
 
 export default function Chat({ context }: { context: string }) {
@@ -71,10 +71,10 @@ export default function Chat({ context }: { context: string }) {
     <div className="rounded-2xl border border-zinc-200 bg-white dark:border-zinc-800 dark:bg-zinc-900">
       <div className="border-b border-zinc-100 px-5 py-3 dark:border-zinc-800">
         <div className="text-sm font-medium text-zinc-700 dark:text-zinc-200">
-          问问你的数据
+          问问你的身体数据
         </div>
         <div className="mt-0.5 text-xs text-zinc-400">
-          只发送指标摘要给 AI，原始健康记录不离开你的浏览器
+          有什么看不懂的直接问。只把汇总后的数字发给 AI，原始记录不会离开你的浏览器。
         </div>
       </div>
 
@@ -130,7 +130,7 @@ export default function Chat({ context }: { context: string }) {
             }
           }}
           rows={1}
-          placeholder="问点什么…（Enter 发送）"
+          placeholder="比如：我为什么总是很累？（回车发送）"
           className="max-h-32 flex-1 resize-none bg-transparent text-sm text-zinc-800 outline-none placeholder:text-zinc-400 dark:text-zinc-100"
         />
         <button

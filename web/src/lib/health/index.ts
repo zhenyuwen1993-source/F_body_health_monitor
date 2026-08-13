@@ -41,7 +41,7 @@ export async function buildDataset(
     );
   }
 
-  const daily = enrich(aggregateDaily(parsed.records), parsed.workouts);
+  const { daily, baselines } = enrich(aggregateDaily(parsed.records), parsed.workouts);
   const dateRange =
     daily.length > 0
       ? { start: daily[0].date, end: daily[daily.length - 1].date }
@@ -52,6 +52,7 @@ export async function buildDataset(
     recordCount: parsed.records.length,
     workoutCount: parsed.workouts.length,
     dateRange,
+    baselines,
     birthYear: parsed.birthYear,
     sex: parsed.sex,
   };

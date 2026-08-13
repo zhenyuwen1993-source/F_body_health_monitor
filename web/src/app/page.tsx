@@ -11,29 +11,28 @@ export default function Home() {
           </span>
         </div>
 
-        <h1 className="text-5xl font-semibold tracking-tight text-zinc-900 sm:text-6xl dark:text-zinc-50">
-          Your body,
+        <h1 className="text-4xl font-semibold tracking-tight text-zinc-900 sm:text-5xl dark:text-zinc-50">
+          你的身体，
           <br />
           <span className="bg-gradient-to-r from-emerald-500 to-sky-500 bg-clip-text text-transparent">
-            understood.
+            终于看得懂了
           </span>
         </h1>
 
-        <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-          Local-first analytics on your Apple Health data. Recovery, strain,
-          sleep — decoded, not just displayed.
+        <p className="max-w-md text-base leading-7 text-zinc-600 dark:text-zinc-400">
+          Apple Watch 记了一堆数据，但没人告诉你那到底意味着什么。把导出文件拖进来，我们用大白话说清楚：昨晚睡得好不好、今天适不适合运动、身体有没有在硬扛。
         </p>
 
         <Link
           href="/dashboard"
           className="mt-4 inline-flex items-center gap-2 rounded-full bg-zinc-900 px-6 py-3 text-sm font-medium text-white shadow-sm transition hover:bg-zinc-700 dark:bg-white dark:text-zinc-900 dark:hover:bg-zinc-200"
         >
-          打开仪表盘
+          开始看我的数据
           <svg viewBox="0 0 24 24" fill="none" className="h-4 w-4 stroke-current" strokeWidth={2}>
             <path d="M5 12h14m0 0l-6-6m6 6l-6 6" strokeLinecap="round" strokeLinejoin="round" />
           </svg>
         </Link>
-        <p className="text-xs text-zinc-400">在浏览器本地解析你的 Apple Health 数据 · 不上传服务器</p>
+        <p className="text-xs text-zinc-400">数据只在你自己的设备上处理，不会上传，也不用注册</p>
       </main>
     </div>
   );
