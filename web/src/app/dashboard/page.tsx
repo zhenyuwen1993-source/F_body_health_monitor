@@ -1,12 +1,21 @@
 "use client";
 
 import { useCallback, useState } from "react";
+import AuthGate from "@/components/dashboard/AuthGate";
 import DashboardView from "@/components/dashboard/DashboardView";
 import { buildDataset, type HealthDataset, type ParseProgress } from "@/lib/health";
 
 type Phase = "idle" | "parsing" | "done" | "error";
 
 export default function DashboardPage() {
+  return (
+    <AuthGate>
+      <UploadFlow />
+    </AuthGate>
+  );
+}
+
+function UploadFlow() {
   const [phase, setPhase] = useState<Phase>("idle");
   const [progress, setProgress] = useState<ParseProgress | null>(null);
   const [data, setData] = useState<HealthDataset | null>(null);

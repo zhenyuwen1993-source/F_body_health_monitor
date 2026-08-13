@@ -1,7 +1,7 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
-import AuthPanel, { type QuotaInfo, type SessionUser } from "./AuthPanel";
+import { useRef, useState } from "react";
+import { useSession } from "./AuthGate";
 
 interface Msg {
   role: "user" | "assistant";
@@ -16,36 +16,12 @@ const SUGGESTIONS = [
 ];
 
 export default function Chat({ context }: { context: string }) {
-  const [user, setUser] = useState<SessionUser | null>(null);
-  const [quota, setQuota] = useState<QuotaInfo | null>(null);
-  const [checking, setChecking] = useState(true);
+  const { quota, refreshQuota } = useSession();
   const [msgs, setMsgs] = useState<Msg[]>([]);
   const [input, setInput] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    fetch("/api/auth")
-      .then((r) => r.json())
-      .then((j) => {
-        if (j.user) setUser(j.user);
-        if (j.quota) setQuota(j.quota);
-      })
-      .catch(() => {})
-      .finally(() => setChecking(false));
-  }, []);
-
-  const signOut = async () => {
-    await fetch("/api/auth", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ action: "logout" }),
-    }).catch(() => {});
-    setUser(null);
-    setQuota(null);
-    setMsgs([]);
-  };
 
   const send = async (question: string) => {
     const q = question.trim();
@@ -70,7 +46,6 @@ export default function Chat({ context }: { context: string }) {
           j.model ? `模型: ${j.model}` : "",
           j.detail ? `详情: ${j.detail}` : "",
         ].filter(Boolean);
-        if (res.status === 401) setUser(null);
         setError(parts.join("\n"));
         setMsgs(next);
         return;
@@ -87,10 +62,7 @@ export default function Chat({ context }: { context: string }) {
         scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight });
       }
       // The answer consumed one question; refresh the remaining count.
-      fetch("/api/auth")
-        .then((r) => r.json())
-        .then((j) => j.quota && setQuota(j.quota))
-        .catch(() => {});
+      refreshQuota();
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
       setMsgs(next);
@@ -98,25 +70,6 @@ export default function Chat({ context }: { context: string }) {
       setBusy(false);
     }
   };
-
-  if (checking) {
-    return (
-      <div className="rounded-2xl border border-zinc-200 bg-white px-5 py-8 text-center text-sm text-zinc-400 dark:border-zinc-800 dark:bg-zinc-900">
-        载入中…
-      </div>
-    );
-  }
-
-  if (!user) {
-    return (
-      <AuthPanel
-        onSignedIn={(u, q) => {
-          setUser(u);
-          if (q) setQuota(q);
-        }}
-      />
-    );
-  }
 
   const outOfQuota = quota != null && quota.remaining <= 0;
 
@@ -127,12 +80,9 @@ export default function Chat({ context }: { context: string }) {
           <div className="text-sm font-medium text-zinc-700 dark:text-zinc-200">
             问问你的身体数据
           </div>
-          <div className="flex items-center gap-2 text-xs text-zinc-400">
-            {quota && <span>今天还能问 {quota.remaining} 次</span>}
-            <button onClick={signOut} className="underline underline-offset-2 hover:text-zinc-600">
-              退出
-            </button>
-          </div>
+          {quota && (
+            <span className="text-xs text-zinc-400">今天还能问 {quota.remaining} 次</span>
+          )}
         </div>
         <div className="mt-0.5 text-xs text-zinc-400">
           有什么看不懂的直接问。只把汇总后的数字发给 AI，原始记录不会离开你的浏览器。

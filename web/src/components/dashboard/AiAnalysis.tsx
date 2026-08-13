@@ -54,7 +54,7 @@ export default function AiAnalysis({ context }: { context: string }) {
   if (state === "auth") {
     return (
       <div className="rounded-xl border border-dashed border-zinc-300 px-4 py-5 text-center text-sm text-zinc-500 dark:border-zinc-700">
-        登录后可以看 AI 对你这份数据的深度解读。往下滚到「有问题就问」注册一个账号就行。
+        登录状态好像失效了，刷新一下页面重新登录即可。
       </div>
     );
   }

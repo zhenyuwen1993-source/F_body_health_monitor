@@ -3,10 +3,11 @@
 import { useMemo, useState } from "react";
 import AiAnalysis from "@/components/dashboard/AiAnalysis";
 import Chat from "@/components/dashboard/Chat";
-import PeriodReport from "@/components/dashboard/PeriodReport";
-import WorkoutAnalysis from "@/components/dashboard/WorkoutAnalysis";
+import FitnessSection from "@/components/dashboard/FitnessSection";
 import Gauge from "@/components/dashboard/Gauge";
 import MetricCard from "@/components/dashboard/MetricCard";
+import PeriodReport from "@/components/dashboard/PeriodReport";
+import Shell, { type TabDef } from "@/components/dashboard/Shell";
 import Sparkline from "@/components/dashboard/Sparkline";
 import SummaryHero from "@/components/dashboard/SummaryHero";
 import { buildContext, type DailyMetrics, type HealthDataset } from "@/lib/health";
@@ -26,6 +27,22 @@ import {
   tsbVerdict,
 } from "@/lib/health/interpret";
 
+const TABS: TabDef[] = [
+  {
+    id: "today",
+    label: "今日",
+    icon: <Icon d="M12 3v1.5m0 15V21M4.5 12H3m18 0h-1.5M5.6 5.6l1.1 1.1m10.6 10.6l1.1 1.1m0-12.8l-1.1 1.1M6.7 17.3l-1.1 1.1M16 12a4 4 0 11-8 0 4 4 0 018 0z" />,
+  },
+  {
+    id: "period",
+    label: "周 / 月",
+    icon: <Icon d="M8 2v4m8-4v4M3 9h18M5 5h14a2 2 0 012 2v12a2 2 0 01-2 2H5a2 2 0 01-2-2V7a2 2 0 012-2z" />,
+  },
+  { id: "fitness", label: "健身", icon: <Icon d="M6.5 6v12M17.5 6v12M3 9.5v5m18-5v5M6.5 12h11" /> },
+  { id: "trends", label: "趋势", icon: <Icon d="M3 17l6-6 4 4 7-7M21 8v5h-5" /> },
+  { id: "ask", label: "问 AI", icon: <Icon d="M8 10h8M8 14h5M21 12a9 9 0 11-3.5-7.1L21 3v9z" /> },
+];
+
 export default function DashboardView({
   data,
   onReset,
@@ -33,18 +50,42 @@ export default function DashboardView({
   data: HealthDataset;
   onReset: () => void;
 }) {
-  const [showDetail, setShowDetail] = useState(false);
+  const [tab, setTab] = useState("today");
+  const context = useMemo(() => buildContext(data), [data]);
+  const meta = `${data.dateRange?.start} 至 ${data.dateRange?.end} · ${data.daily.length} 天`;
+
+  return (
+    <Shell tabs={TABS} active={tab} onSelect={setTab} meta={meta} onReset={onReset}>
+      {tab === "today" && <TodayTab data={data} context={context} />}
+      {tab === "period" && (
+        <Section title="周 / 月报告" sub="每周和每月的变化，以及和上一期的对比。">
+          <PeriodReport data={data} />
+        </Section>
+      )}
+      {tab === "fitness" && <FitnessSection data={data} />}
+      {tab === "trends" && <TrendsTab data={data} />}
+      {tab === "ask" && (
+        <Section title="问 AI" sub="有什么看不懂的直接问，它知道你这份数据。">
+          <Chat context={context} />
+        </Section>
+      )}
+      <footer className="mt-10 space-y-1 pb-6 text-center text-xs text-zinc-400">
+        <p>{DISCLAIMER_SHORT}</p>
+        <p>健康数据只在你的浏览器里处理，刷新页面即清除。</p>
+      </footer>
+    </Shell>
+  );
+}
+
+// --- Tabs --------------------------------------------------------------------
+
+function TodayTab({ data, context }: { data: HealthDataset; context: string }) {
   const today = data.daily[data.daily.length - 1];
   const base = data.baselines;
-  const recent = useMemo(() => data.daily.slice(-60), [data.daily]);
-  const context = useMemo(() => buildContext(data), [data]);
   const summary = useMemo(() => dailySummary(data), [data]);
 
-  const series = (pick: (d: DailyMetrics) => number | undefined) =>
-    recent.map((d) => ({ label: d.date.slice(5), value: pick(d) ?? null }));
-
-  // Exports usually happen mid-day, so the last day is partial; fall back to
-  // the most recent day that has each value and say which day it came from.
+  // Exports usually happen mid-day, so the final day is partial: fall back to
+  // the most recent day that has each value, and label which day that was.
   const latest = (pick: (d: DailyMetrics) => number | undefined) => {
     for (let i = data.daily.length - 1; i >= 0; i--) {
       const v = pick(data.daily[i]);
@@ -60,32 +101,10 @@ export default function DashboardView({
   const cons = latest((d) => d.sleep_consistency);
   const hrv = latest((d) => d.hrv);
   const rhr = latest((d) => d.resting_hr);
-  const spo2 = latest((d) => d.spo2);
-  const weight = latest((d) => d.weight);
   const sleepDay = data.daily.find((d) => d.date === sleep.day);
 
   return (
-    <div className="mx-auto w-full max-w-4xl px-5 py-8 sm:px-6">
-      <header className="mb-6 flex flex-wrap items-center justify-between gap-3">
-        <div className="flex items-center gap-2.5">
-          <div className="h-2.5 w-2.5 rounded-full bg-emerald-500" />
-          <div>
-            <div className="font-semibold text-zinc-900 dark:text-zinc-50">
-              Striortus Health
-            </div>
-            <div className="text-xs text-zinc-400">
-              {data.dateRange?.start} 至 {data.dateRange?.end} · 共 {data.daily.length} 天
-            </div>
-          </div>
-        </div>
-        <button
-          onClick={onReset}
-          className="rounded-lg border border-zinc-300 px-3 py-1.5 text-sm text-zinc-600 hover:bg-zinc-50 dark:border-zinc-700 dark:text-zinc-300 dark:hover:bg-zinc-800"
-        >
-          换个文件
-        </button>
-      </header>
-
+    <div className="space-y-8">
       <SummaryHero
         greeting={summary.greeting}
         paragraphs={summary.paragraphs}
@@ -93,19 +112,11 @@ export default function DashboardView({
         date={today.date}
       />
 
-      {/* AI's cross-metric read, streaming in behind the instant summary. */}
-      <section className="mt-5">
-        <h2 className="mb-3 text-base font-semibold text-zinc-900 dark:text-zinc-50">
-          AI 深度解读
-        </h2>
+      <Section title="AI 深度解读" sub="把几个指标串起来看，给出今天该怎么做。">
         <AiAnalysis context={context} />
-      </section>
+      </Section>
 
-      {/* The three headline numbers, each with a plain-language label. */}
-      <section className="mt-8">
-        <h2 className="mb-3 text-base font-semibold text-zinc-900 dark:text-zinc-50">
-          三个关键指标
-        </h2>
+      <Section title="三个关键指标">
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
           <GaugeCard
             metricKey="training_readiness"
@@ -127,13 +138,9 @@ export default function DashboardView({
             verdict={strainVerdict(today.strain)}
           />
         </div>
-      </section>
+      </Section>
 
-      {/* Everyday metrics people actually recognise. */}
-      <section className="mt-8">
-        <h2 className="mb-3 text-base font-semibold text-zinc-900 dark:text-zinc-50">
-          身体状况
-        </h2>
+      <Section title="身体状况">
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <MetricCard
             metricKey="sleep_hours"
@@ -169,109 +176,87 @@ export default function DashboardView({
             unit="步"
             verdict={stepsVerdict(today.steps, base.steps)}
           />
-          <MetricCard
-            metricKey="tsb"
-            value={today.tsb}
-            verdict={tsbVerdict(today.tsb)}
-          />
+          <MetricCard metricKey="tsb" value={today.tsb} verdict={tsbVerdict(today.tsb)} />
         </div>
-      </section>
+      </Section>
 
-      {/* Sleep stage breakdown, only when the watch recorded it. */}
       {sleepDay && (sleepDay.sleep_deep || sleepDay.sleep_rem || sleepDay.sleep_core) && (
-        <section className="mt-8">
-          <h2 className="mb-3 text-base font-semibold text-zinc-900 dark:text-zinc-50">
-            那晚睡得怎么样
-          </h2>
+        <Section title="那晚睡得怎么样">
           <SleepBar day={sleepDay} />
-        </section>
+        </Section>
       )}
-
-      {/* AI */}
-      <section className="mt-8">
-        <h2 className="mb-3 text-base font-semibold text-zinc-900 dark:text-zinc-50">
-          有问题就问
-        </h2>
-        <Chat context={context} />
-      </section>
-
-      {/* Week / month roll-ups. */}
-      <section className="mt-8">
-        <h2 className="mb-3 text-base font-semibold text-zinc-900 dark:text-zinc-50">
-          这周 / 这个月怎么样
-        </h2>
-        <PeriodReport data={data} />
-      </section>
-
-      {/* Training intensity. */}
-      <section className="mt-8">
-        <h2 className="mb-3 text-base font-semibold text-zinc-900 dark:text-zinc-50">
-          运动分析
-        </h2>
-        <WorkoutAnalysis data={data} />
-      </section>
-
-      {/* Everything numeric hides behind one click. */}
-      <section className="mt-8">
-        <button
-          onClick={() => setShowDetail((v) => !v)}
-          className="flex w-full items-center justify-between rounded-xl border border-zinc-200 px-4 py-3 text-sm font-medium text-zinc-700 hover:bg-zinc-50 dark:border-zinc-800 dark:text-zinc-200 dark:hover:bg-zinc-900"
-        >
-          <span>{showDetail ? "收起详细数据" : "查看详细数据和趋势图"}</span>
-          <span className="text-zinc-400">{showDetail ? "▲" : "▼"}</span>
-        </button>
-
-        {showDetail && (
-          <div className="mt-5 space-y-8">
-            <div>
-              <h3 className="mb-3 text-sm font-semibold text-zinc-700 dark:text-zinc-200">
-                其他指标
-              </h3>
-              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                <MetricCard metricKey="active_energy_kcal" value={today.active_energy} unit="千卡" />
-                <MetricCard metricKey="exercise_minutes" value={today.exercise} unit="分钟" />
-                <MetricCard metricKey="spo2_avg" value={spo2.value} unit="%" asOf={asOf(spo2)} />
-                <MetricCard metricKey="weight_kg" value={weight.value} unit="kg" asOf={asOf(weight)} />
-                <MetricCard metricKey="mood_score" value={today.mood} unit="/5" />
-                <MetricCard metricKey="ctl" value={today.ctl} />
-              </div>
-            </div>
-
-            <div>
-              <h3 className="mb-3 text-sm font-semibold text-zinc-700 dark:text-zinc-200">
-                最近 {recent.length} 天趋势
-              </h3>
-              <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
-                <Trend title="今日状态">
-                  <Sparkline data={series((d) => d.readiness)} stroke="#10b981" fill="rgba(16,185,129,0.12)" />
-                </Trend>
-                <Trend title="今日消耗">
-                  <Sparkline data={series((d) => d.strain)} stroke="#0ea5e9" fill="rgba(14,165,233,0.12)" zeroBased />
-                </Trend>
-                <Trend title="心率变异性">
-                  <Sparkline data={series((d) => d.hrv)} stroke="#8b5cf6" fill="rgba(139,92,246,0.12)" unit=" 毫秒" />
-                </Trend>
-                <Trend title="静息心率">
-                  <Sparkline data={series((d) => d.resting_hr)} stroke="#ef4444" fill="rgba(239,68,68,0.10)" unit=" 次/分" />
-                </Trend>
-                <Trend title="睡眠时长">
-                  <Sparkline data={series((d) => d.sleep_asleep ?? d.sleep_inbed)} stroke="#6366f1" fill="rgba(99,102,241,0.12)" unit=" 小时" zeroBased />
-                </Trend>
-                <Trend title="步数">
-                  <Sparkline data={series((d) => d.steps)} stroke="#f59e0b" fill="rgba(245,158,11,0.12)" zeroBased />
-                </Trend>
-              </div>
-            </div>
-
-          </div>
-        )}
-      </section>
-
-      <footer className="mt-10 space-y-1 pb-10 text-center text-xs text-zinc-400">
-        <p>{DISCLAIMER_SHORT}</p>
-        <p>数据只存在于你的浏览器，刷新页面就清除。</p>
-      </footer>
     </div>
+  );
+}
+
+function TrendsTab({ data }: { data: HealthDataset }) {
+  const recent = useMemo(() => data.daily.slice(-60), [data.daily]);
+  const today = data.daily[data.daily.length - 1];
+  const series = (pick: (d: DailyMetrics) => number | undefined) =>
+    recent.map((d) => ({ label: d.date.slice(5), value: pick(d) ?? null }));
+
+  return (
+    <div className="space-y-8">
+      <Section title={`最近 ${recent.length} 天趋势`} sub="看变化方向比看单日数字更有意义。">
+        <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
+          <Trend title="今日状态">
+            <Sparkline data={series((d) => d.readiness)} stroke="#10b981" fill="rgba(16,185,129,0.12)" />
+          </Trend>
+          <Trend title="今日消耗">
+            <Sparkline data={series((d) => d.strain)} stroke="#0ea5e9" fill="rgba(14,165,233,0.12)" zeroBased />
+          </Trend>
+          <Trend title="心率变异性">
+            <Sparkline data={series((d) => d.hrv)} stroke="#8b5cf6" fill="rgba(139,92,246,0.12)" unit=" 毫秒" />
+          </Trend>
+          <Trend title="静息心率">
+            <Sparkline data={series((d) => d.resting_hr)} stroke="#ef4444" fill="rgba(239,68,68,0.10)" unit=" 次/分" />
+          </Trend>
+          <Trend title="睡眠时长">
+            <Sparkline
+              data={series((d) => d.sleep_asleep ?? d.sleep_inbed)}
+              stroke="#6366f1"
+              fill="rgba(99,102,241,0.12)"
+              unit=" 小时"
+              zeroBased
+            />
+          </Trend>
+          <Trend title="步数">
+            <Sparkline data={series((d) => d.steps)} stroke="#f59e0b" fill="rgba(245,158,11,0.12)" zeroBased />
+          </Trend>
+        </div>
+      </Section>
+
+      <Section title="其他指标">
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+          <MetricCard metricKey="active_energy_kcal" value={today.active_energy} unit="千卡" />
+          <MetricCard metricKey="exercise_minutes" value={today.exercise} unit="分钟" />
+          <MetricCard metricKey="spo2_avg" value={lastOf(data, (d) => d.spo2)} unit="%" />
+          <MetricCard metricKey="weight_kg" value={lastOf(data, (d) => d.weight)} unit="kg" />
+          <MetricCard metricKey="mood_score" value={today.mood} unit="/5" />
+          <MetricCard metricKey="ctl" value={today.ctl} />
+        </div>
+      </Section>
+    </div>
+  );
+}
+
+// --- Shared bits -------------------------------------------------------------
+
+function Section({
+  title,
+  sub,
+  children,
+}: {
+  title: string;
+  sub?: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <section>
+      <h2 className="text-base font-semibold text-zinc-900 dark:text-zinc-50">{title}</h2>
+      {sub && <p className="mt-0.5 text-xs text-zinc-400">{sub}</p>}
+      <div className="mt-3">{children}</div>
+    </section>
   );
 }
 
@@ -387,4 +372,21 @@ function SleepBar({ day }: { day: DailyMetrics }) {
   );
 }
 
+function Icon({ d }: { d: string }) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" className="h-4 w-4 stroke-current" strokeWidth={1.8}>
+      <path d={d} strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
+}
 
+function lastOf(
+  data: HealthDataset,
+  pick: (d: DailyMetrics) => number | undefined,
+): number | undefined {
+  for (let i = data.daily.length - 1; i >= 0; i--) {
+    const v = pick(data.daily[i]);
+    if (v != null && Number.isFinite(v)) return v;
+  }
+  return undefined;
+}
