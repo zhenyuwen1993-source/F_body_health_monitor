@@ -5,6 +5,8 @@
 // OpenAI-compatible chat-completions protocol. The model can be overridden with
 // AI_MODEL without touching the code. Keys never reach the client.
 
+import { clientIp, rateLimit, sameOrigin } from "@/lib/ratelimit";
+
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 export const maxDuration = 60;
@@ -63,6 +65,18 @@ interface ChatMessage {
 }
 
 export async function POST(req: Request) {
+  // Abuse protection: the endpoint spends real money per call.
+  if (!sameOrigin(req)) {
+    return Response.json({ error: "请求来源不被允许。" }, { status: 403 });
+  }
+  const limit = rateLimit(clientIp(req));
+  if (!limit.ok) {
+    return Response.json(
+      { error: `提问太频繁了，请 ${Math.ceil(limit.retryAfter / 60)} 分钟后再试。` },
+      { status: 429, headers: { "Retry-After": String(limit.retryAfter) } },
+    );
+  }
+
   const provider = resolveProvider();
   if (!provider) {
     return Response.json(
