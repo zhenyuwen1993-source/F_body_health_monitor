@@ -1,10 +1,12 @@
 "use client";
 
 import { useCallback, useMemo, useState } from "react";
+import Chat from "@/components/dashboard/Chat";
 import Gauge from "@/components/dashboard/Gauge";
 import Sparkline from "@/components/dashboard/Sparkline";
 import StatCard from "@/components/dashboard/StatCard";
 import {
+  buildContext,
   buildDataset,
   type DailyMetrics,
   type HealthDataset,
@@ -140,11 +142,31 @@ export default function DashboardPage() {
 function Dashboard({ data, onReset }: { data: HealthDataset; onReset: () => void }) {
   const today = data.daily[data.daily.length - 1];
   const recent = useMemo(() => data.daily.slice(-60), [data.daily]);
+  const context = useMemo(() => buildContext(data), [data]);
 
   const series = (pick: (d: DailyMetrics) => number | undefined) =>
     recent.map((d) => ({ label: d.date.slice(5), value: pick(d) ?? null }));
 
-  const sleepH = today.sleep_asleep ?? today.sleep_inbed;
+  // The export usually happens mid-day, so the final day is partial. Fall back
+  // to the most recent day that actually has the value, and say which day.
+  const latest = (pick: (d: DailyMetrics) => number | undefined) => {
+    for (let i = data.daily.length - 1; i >= 0; i--) {
+      const v = pick(data.daily[i]);
+      if (v != null && Number.isFinite(v))
+        return { value: v, day: data.daily[i].date, stale: i !== data.daily.length - 1 };
+    }
+    return { value: undefined, day: "", stale: false };
+  };
+  const asOf = (r: { day: string; stale: boolean }, extra?: string) =>
+    [r.stale ? `${r.day.slice(5)} 数据` : undefined, extra].filter(Boolean).join(" · ") ||
+    undefined;
+
+  const sleep = latest((d) => d.sleep_asleep ?? d.sleep_inbed);
+  const cons = latest((d) => d.sleep_consistency);
+  const hrv = latest((d) => d.hrv);
+  const rhr = latest((d) => d.resting_hr);
+  const spo2 = latest((d) => d.spo2);
+  const weight = latest((d) => d.weight);
 
   return (
     <div className="mx-auto w-full max-w-5xl px-6 py-10">
@@ -183,18 +205,31 @@ function Dashboard({ data, onReset }: { data: HealthDataset; onReset: () => void
 
       {/* Sleep + vitals */}
       <section className="mb-10 grid grid-cols-2 gap-4 sm:grid-cols-4">
-        <StatCard label="睡眠" value={sleepH} unit="h" hint={sleepBreakdown(today)} />
-        <StatCard label="睡眠一致性" value={today.sleep_consistency} unit="/100" />
-        <StatCard label="HRV" value={today.hrv} unit="ms" />
-        <StatCard label="静息心率" value={today.resting_hr} unit="bpm" />
+        <StatCard
+          label="睡眠"
+          value={sleep.value}
+          unit="h"
+          hint={asOf(sleep, sleepBreakdown(data.daily.find((d) => d.date === sleep.day)))}
+        />
+        <StatCard label="睡眠一致性" value={cons.value} unit="/100" hint={asOf(cons)} />
+        <StatCard label="HRV" value={hrv.value} unit="ms" hint={asOf(hrv)} />
+        <StatCard label="静息心率" value={rhr.value} unit="bpm" hint={asOf(rhr)} />
         <StatCard label="步数" value={today.steps} />
         <StatCard label="活动能量" value={today.active_energy} unit="kcal" />
         <StatCard label="运动时间" value={today.exercise} unit="min" />
-        <StatCard label="血氧" value={today.spo2} unit="%" />
-        <StatCard label="体重" value={today.weight} unit="kg" />
+        <StatCard label="血氧" value={spo2.value} unit="%" hint={asOf(spo2)} />
+        <StatCard label="体重" value={weight.value} unit="kg" hint={asOf(weight)} />
         <StatCard label="心情" value={today.mood} unit="/5" />
         <StatCard label="Fitness (CTL)" value={today.ctl} />
         <StatCard label="Form (TSB)" value={today.tsb} hint={today.tsb != null && today.tsb >= 0 ? "偏新鲜" : "偏疲劳"} />
+      </section>
+
+      {/* AI chat */}
+      <section className="mb-10">
+        <h2 className="mb-4 text-sm font-semibold tracking-wide text-zinc-400 uppercase">
+          AI 分析
+        </h2>
+        <Chat context={context} />
       </section>
 
       {/* Trends */}
@@ -280,7 +315,8 @@ function TrendCard({ title, children }: { title: string; unit?: string; children
   );
 }
 
-function sleepBreakdown(d: DailyMetrics): string | undefined {
+function sleepBreakdown(d: DailyMetrics | undefined): string | undefined {
+  if (!d) return undefined;
   const parts: string[] = [];
   if (d.sleep_deep) parts.push(`深 ${d.sleep_deep.toFixed(1)}h`);
   if (d.sleep_rem) parts.push(`REM ${d.sleep_rem.toFixed(1)}h`);

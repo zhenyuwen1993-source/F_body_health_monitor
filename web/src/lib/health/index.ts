@@ -8,6 +8,7 @@ import type { HealthDataset } from "./types";
 export type { HealthDataset } from "./types";
 export type { DailyMetrics, WorkoutRecord } from "./types";
 export type { ParseProgress } from "./parse";
+export { buildContext } from "./context";
 
 export async function buildDataset(
   file: Blob,
