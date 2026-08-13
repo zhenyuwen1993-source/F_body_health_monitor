@@ -1,3 +1,5 @@
+import Link from "next/link";
+
 export default function Home() {
   return (
     <div className="flex flex-1 items-center justify-center bg-gradient-to-br from-emerald-50 via-white to-sky-50 dark:from-zinc-950 dark:via-black dark:to-zinc-900">
@@ -22,13 +24,16 @@ export default function Home() {
           sleep — decoded, not just displayed.
         </p>
 
-        <div className="mt-4 flex items-center gap-3 rounded-full border border-zinc-200 bg-white/60 px-5 py-2 text-sm text-zinc-500 backdrop-blur dark:border-zinc-800 dark:bg-zinc-900/60 dark:text-zinc-400">
-          <span className="relative flex h-2 w-2">
-            <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-amber-400 opacity-75" />
-            <span className="relative inline-flex h-2 w-2 rounded-full bg-amber-500" />
-          </span>
-          Private beta — coming soon
-        </div>
+        <Link
+          href="/dashboard"
+          className="mt-4 inline-flex items-center gap-2 rounded-full bg-zinc-900 px-6 py-3 text-sm font-medium text-white shadow-sm transition hover:bg-zinc-700 dark:bg-white dark:text-zinc-900 dark:hover:bg-zinc-200"
+        >
+          打开仪表盘
+          <svg viewBox="0 0 24 24" fill="none" className="h-4 w-4 stroke-current" strokeWidth={2}>
+            <path d="M5 12h14m0 0l-6-6m6 6l-6 6" strokeLinecap="round" strokeLinejoin="round" />
+          </svg>
+        </Link>
+        <p className="text-xs text-zinc-400">在浏览器本地解析你的 Apple Health 数据 · 不上传服务器</p>
       </main>
     </div>
   );
