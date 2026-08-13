@@ -38,8 +38,13 @@ export default function Chat({ context }: { context: string }) {
       });
 
       if (!res.ok || !res.body) {
-        const j = await res.json().catch(() => ({}));
-        setError(j.error ?? `请求失败 (${res.status})`);
+        const j = await res.json().catch(() => ({}) as Record<string, string>);
+        const parts = [
+          j.error ?? `请求失败 (${res.status})`,
+          j.model ? `模型: ${j.model}` : "",
+          j.detail ? `详情: ${j.detail}` : "",
+        ].filter(Boolean);
+        setError(parts.join("\n"));
         setMsgs(next);
         return;
       }
@@ -109,7 +114,7 @@ export default function Chat({ context }: { context: string }) {
       )}
 
       {error && (
-        <div className="mx-5 mb-3 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-700 dark:border-red-900 dark:bg-red-950/40 dark:text-red-300">
+        <div className="mx-5 mb-3 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-xs whitespace-pre-wrap text-red-700 dark:border-red-900 dark:bg-red-950/40 dark:text-red-300">
           {error}
         </div>
       )}

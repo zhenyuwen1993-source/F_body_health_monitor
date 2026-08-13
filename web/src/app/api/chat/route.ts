@@ -1,14 +1,41 @@
-// Streaming chat endpoint backed by the DeepSeek API (OpenAI-compatible).
+// Streaming chat endpoint for the health assistant.
 //
-// The browser sends the user's question plus a compact metrics digest; the key
-// never reaches the client.
+// Works with either Vercel AI Gateway (AI_GATEWAY_API_KEY, one key for many
+// providers) or DeepSeek direct (DEEPSEEK_API_KEY) — both speak the
+// OpenAI-compatible chat-completions protocol. The model can be overridden with
+// AI_MODEL without touching the code. Keys never reach the client.
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 export const maxDuration = 60;
 
+const GATEWAY_URL = "https://ai-gateway.vercel.sh/v1/chat/completions";
 const DEEPSEEK_URL = "https://api.deepseek.com/chat/completions";
-const MODEL = "deepseek-chat";
+
+/** Pick the provider from whichever key is configured. */
+function resolveProvider():
+  | { url: string; key: string; model: string; via: string }
+  | null {
+  const gateway = process.env.AI_GATEWAY_API_KEY;
+  if (gateway) {
+    return {
+      url: GATEWAY_URL,
+      key: gateway,
+      model: process.env.AI_MODEL || "deepseek/deepseek-v3.1",
+      via: "vercel-ai-gateway",
+    };
+  }
+  const deepseek = process.env.DEEPSEEK_API_KEY;
+  if (deepseek) {
+    return {
+      url: DEEPSEEK_URL,
+      key: deepseek,
+      model: process.env.AI_MODEL || "deepseek-chat",
+      via: "deepseek",
+    };
+  }
+  return null;
+}
 
 const SYSTEM_PROMPT = `你是一位专业、务实的健康与训练分析助手，服务于 Striortus Health。
 
@@ -36,12 +63,12 @@ interface ChatMessage {
 }
 
 export async function POST(req: Request) {
-  const apiKey = process.env.DEEPSEEK_API_KEY;
-  if (!apiKey) {
+  const provider = resolveProvider();
+  if (!provider) {
     return Response.json(
       {
         error:
-          "服务器未配置 DEEPSEEK_API_KEY。请在 Vercel 项目的 Environment Variables 里添加后重新部署。",
+          "服务器未配置 AI Key。请在 Vercel 项目的 Environment Variables 里添加 AI_GATEWAY_API_KEY（或 DEEPSEEK_API_KEY），保存后重新部署。",
       },
       { status: 503 },
     );
@@ -61,7 +88,7 @@ export async function POST(req: Request) {
   const context = (body.context ?? "").slice(0, 20_000);
 
   const payload = {
-    model: MODEL,
+    model: provider.model,
     stream: true,
     temperature: 0.3,
     messages: [
@@ -79,30 +106,35 @@ export async function POST(req: Request) {
 
   let upstream: Response;
   try {
-    upstream = await fetch(DEEPSEEK_URL, {
+    upstream = await fetch(provider.url, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        Authorization: `Bearer ${apiKey}`,
+        Authorization: `Bearer ${provider.key}`,
       },
       body: JSON.stringify(payload),
     });
   } catch {
-    return Response.json({ error: "无法连接 DeepSeek 服务。" }, { status: 502 });
+    return Response.json(
+      { error: `无法连接 AI 服务（${provider.via}）。` },
+      { status: 502 },
+    );
   }
 
   if (!upstream.ok || !upstream.body) {
     const detail = await upstream.text().catch(() => "");
     const hint =
-      upstream.status === 401
-        ? "API Key 无效。"
+      upstream.status === 401 || upstream.status === 403
+        ? "API Key 无效或无权限。"
         : upstream.status === 402
-          ? "DeepSeek 账户余额不足。"
-          : upstream.status === 429
-            ? "请求过于频繁，稍后再试。"
-            : `DeepSeek 返回 ${upstream.status}。`;
+          ? "账户余额/额度不足。"
+          : upstream.status === 404
+            ? `模型 "${provider.model}" 不存在。请在 Vercel 环境变量里设置 AI_MODEL 为 Model List 页面上的有效 ID。`
+            : upstream.status === 429
+              ? "请求过于频繁，稍后再试。"
+              : `AI 服务返回 ${upstream.status}。`;
     return Response.json(
-      { error: hint, detail: detail.slice(0, 500) },
+      { error: hint, model: provider.model, via: provider.via, detail: detail.slice(0, 500) },
       { status: 502 },
     );
   }
