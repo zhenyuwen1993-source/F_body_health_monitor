@@ -3,6 +3,8 @@
 import { useMemo, useState } from "react";
 import AiAnalysis from "@/components/dashboard/AiAnalysis";
 import Chat from "@/components/dashboard/Chat";
+import PeriodReport from "@/components/dashboard/PeriodReport";
+import WorkoutAnalysis from "@/components/dashboard/WorkoutAnalysis";
 import Gauge from "@/components/dashboard/Gauge";
 import MetricCard from "@/components/dashboard/MetricCard";
 import Sparkline from "@/components/dashboard/Sparkline";
@@ -193,6 +195,22 @@ export default function DashboardView({
         <Chat context={context} />
       </section>
 
+      {/* Week / month roll-ups. */}
+      <section className="mt-8">
+        <h2 className="mb-3 text-base font-semibold text-zinc-900 dark:text-zinc-50">
+          这周 / 这个月怎么样
+        </h2>
+        <PeriodReport data={data} />
+      </section>
+
+      {/* Training intensity. */}
+      <section className="mt-8">
+        <h2 className="mb-3 text-base font-semibold text-zinc-900 dark:text-zinc-50">
+          运动分析
+        </h2>
+        <WorkoutAnalysis data={data} />
+      </section>
+
       {/* Everything numeric hides behind one click. */}
       <section className="mt-8">
         <button
@@ -245,44 +263,6 @@ export default function DashboardView({
               </div>
             </div>
 
-            {data.workouts.length > 0 && (
-              <div>
-                <h3 className="mb-3 text-sm font-semibold text-zinc-700 dark:text-zinc-200">
-                  近期训练 · 共 {data.workoutCount} 次
-                </h3>
-                <div className="overflow-x-auto rounded-xl border border-zinc-200 dark:border-zinc-800">
-                  <table className="w-full min-w-[420px] text-sm">
-                    <thead className="bg-zinc-50 text-xs text-zinc-400 dark:bg-zinc-900">
-                      <tr>
-                        <th className="px-4 py-2 text-left font-medium">日期</th>
-                        <th className="px-4 py-2 text-left font-medium">类型</th>
-                        <th className="px-4 py-2 text-right font-medium">时长</th>
-                        <th className="px-4 py-2 text-right font-medium">距离</th>
-                        <th className="px-4 py-2 text-right font-medium">消耗</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-zinc-100 dark:divide-zinc-800">
-                      {[...data.workouts]
-                        .sort((a, b) => b.startDate.getTime() - a.startDate.getTime())
-                        .slice(0, 12)
-                        .map((w, i) => (
-                          <tr key={i} className="text-zinc-700 dark:text-zinc-200">
-                            <td className="px-4 py-2">{w.startDate.toISOString().slice(0, 10)}</td>
-                            <td className="px-4 py-2">{translateActivity(w.activityType)}</td>
-                            <td className="px-4 py-2 text-right tabular-nums">{Math.round(w.durationMin)} 分钟</td>
-                            <td className="px-4 py-2 text-right tabular-nums">
-                              {w.totalDistanceKm ? `${w.totalDistanceKm.toFixed(2)} km` : "—"}
-                            </td>
-                            <td className="px-4 py-2 text-right tabular-nums">
-                              {w.totalEnergyKcal ? `${Math.round(w.totalEnergyKcal)} 千卡` : "—"}
-                            </td>
-                          </tr>
-                        ))}
-                    </tbody>
-                  </table>
-                </div>
-              </div>
-            )}
           </div>
         )}
       </section>
@@ -407,27 +387,4 @@ function SleepBar({ day }: { day: DailyMetrics }) {
   );
 }
 
-const ACTIVITY_CN: Record<string, string> = {
-  Running: "跑步",
-  Walking: "步行",
-  Cycling: "骑行",
-  Swimming: "游泳",
-  Hiking: "徒步",
-  Yoga: "瑜伽",
-  TraditionalStrengthTraining: "力量训练",
-  FunctionalStrengthTraining: "功能性力量",
-  HighIntensityIntervalTraining: "高强度间歇",
-  Tennis: "网球",
-  Basketball: "篮球",
-  Soccer: "足球",
-  Elliptical: "椭圆机",
-  Rowing: "划船机",
-  CoreTraining: "核心训练",
-  Cooldown: "放松",
-  MindAndBody: "身心练习",
-  Other: "其他",
-};
 
-function translateActivity(a: string): string {
-  return ACTIVITY_CN[a] ?? a;
-}

@@ -127,8 +127,10 @@ export async function parseHealthXmlStream(
   let birthYear: number | undefined;
   let sex: string | undefined;
 
-  // Assembly state for a currently-open <Record> (to collect MetadataEntry).
+  // Assembly state for the currently-open <Record> / <Workout>, so their child
+  // <MetadataEntry> / <WorkoutStatistics> elements attach to the right parent.
   let openRecord: HealthRecord | null = null;
+  let openWorkout: WorkoutRecord | null = null;
 
   const emitRecordTag = (t: Tag) => {
     const a = t.attrs;
@@ -160,24 +162,34 @@ export async function parseHealthXmlStream(
     } else if (t.name === "MetadataEntry") {
       if (openRecord && t.attrs.key) {
         (openRecord.meta ??= {})[t.attrs.key] = t.attrs.value ?? "";
+      } else if (openWorkout && t.attrs.key) {
+        applyWorkoutMeta(openWorkout, t.attrs.key, t.attrs.value ?? "");
       }
-    } else if (t.name === "Workout" && !t.isClose) {
+    } else if (t.name === "WorkoutStatistics") {
+      if (openWorkout) applyWorkoutStat(openWorkout, t.attrs);
+    } else if (t.name === "Workout") {
+      if (t.isClose) {
+        openWorkout = null;
+        return;
+      }
       const a = t.attrs;
       const start = appleDate(a.startDate);
       const end = appleDate(a.endDate) ?? start;
       if (start) {
-        workouts.push({
+        const w: WorkoutRecord = {
           activityType: (a.workoutActivityType ?? "").replace(
             "HKWorkoutActivityType",
             "",
           ),
-          durationMin: num(a.duration) ?? 0,
-          totalDistanceKm: num(a.totalDistance),
+          durationMin: durationToMin(num(a.duration) ?? 0, a.durationUnit),
+          totalDistanceKm: distanceToKm(num(a.totalDistance), a.totalDistanceUnit),
           totalEnergyKcal: num(a.totalEnergyBurned),
           sourceName: a.sourceName ?? "",
           startDate: start,
           endDate: end ?? start,
-        });
+        };
+        workouts.push(w);
+        openWorkout = t.selfClose ? null : w;
       }
     } else if (t.name === "Me") {
       const dob = t.attrs.HKCharacteristicTypeIdentifierDateOfBirth;
@@ -236,4 +248,50 @@ function num(s: string | undefined): number | undefined {
   if (s == null) return undefined;
   const v = parseFloat(s);
   return isNaN(v) ? undefined : v;
+}
+
+function durationToMin(value: number, unit: string | undefined): number {
+  const u = (unit ?? "min").toLowerCase();
+  if (u.startsWith("sec") || u === "s") return value / 60;
+  if (u.startsWith("hr") || u === "h" || u.startsWith("hour")) return value * 60;
+  return value;
+}
+
+function distanceToKm(
+  value: number | undefined,
+  unit: string | undefined,
+): number | undefined {
+  if (value == null) return undefined;
+  const u = (unit ?? "km").toLowerCase();
+  if (u === "m" || u.startsWith("meter")) return value / 1000;
+  if (u === "mi" || u.startsWith("mile")) return value * 1.609344;
+  return value;
+}
+
+/** `<WorkoutStatistics type=... average=... minimum=... maximum=... sum=...>` */
+function applyWorkoutStat(w: WorkoutRecord, a: Record<string, string>) {
+  const type = a.type ?? "";
+  if (type.endsWith("HeartRate")) {
+    w.hrAvg = num(a.average) ?? w.hrAvg;
+    w.hrMin = num(a.minimum) ?? w.hrMin;
+    w.hrMax = num(a.maximum) ?? w.hrMax;
+  } else if (type.endsWith("ActiveEnergyBurned")) {
+    w.totalEnergyKcal = num(a.sum) ?? w.totalEnergyKcal;
+  } else if (type.includes("Distance")) {
+    const km = distanceToKm(num(a.sum), a.unit);
+    if (km != null) w.totalDistanceKm = km;
+  }
+}
+
+function applyWorkoutMeta(w: WorkoutRecord, key: string, value: string) {
+  if (key === "HKAverageMETs") {
+    const m = value.match(/[\d.]+/);
+    if (m) w.mets = parseFloat(m[0]);
+  } else if (key === "HKElevationAscended") {
+    // Apple stores this in centimetres, e.g. "5300 cm".
+    const m = value.match(/[\d.]+/);
+    if (m) w.elevationM = parseFloat(m[0]) / 100;
+  } else if (key === "HKIndoorWorkout") {
+    w.indoor = value === "1";
+  }
 }

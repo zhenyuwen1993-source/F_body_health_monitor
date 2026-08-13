@@ -23,6 +23,14 @@ export interface WorkoutRecord {
   sourceName: string;
   startDate: Date;
   endDate: Date;
+  // From <WorkoutStatistics> children, when the watch recorded them.
+  hrAvg?: number;
+  hrMin?: number;
+  hrMax?: number;
+  // From <MetadataEntry> children.
+  mets?: number;
+  elevationM?: number;
+  indoor?: boolean;
 }
 
 /** Friendly metric keys we track. */
