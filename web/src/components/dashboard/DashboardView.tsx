@@ -7,7 +7,9 @@ import FitnessSection from "@/components/dashboard/FitnessSection";
 import Gauge from "@/components/dashboard/Gauge";
 import MetricCard from "@/components/dashboard/MetricCard";
 import PeriodReport from "@/components/dashboard/PeriodReport";
+import ProfileForm from "@/components/dashboard/ProfileForm";
 import Shell, { type TabDef } from "@/components/dashboard/Shell";
+import { useSession } from "@/components/dashboard/AuthGate";
 import Sparkline from "@/components/dashboard/Sparkline";
 import SummaryHero from "@/components/dashboard/SummaryHero";
 import { buildContext, type DailyMetrics, type HealthDataset } from "@/lib/health";
@@ -41,6 +43,11 @@ const TABS: TabDef[] = [
   { id: "fitness", label: "健身", icon: <Icon d="M6.5 6v12M17.5 6v12M3 9.5v5m18-5v5M6.5 12h11" /> },
   { id: "trends", label: "趋势", icon: <Icon d="M3 17l6-6 4 4 7-7M21 8v5h-5" /> },
   { id: "ask", label: "问 AI", icon: <Icon d="M8 10h8M8 14h5M21 12a9 9 0 11-3.5-7.1L21 3v9z" /> },
+  {
+    id: "body",
+    label: "我的身体",
+    icon: <Icon d="M12 6a2 2 0 100-4 2 2 0 000 4zM12 6v7m0 0l-3 8m3-8l3 8M7 9l5-1 5 1" />,
+  },
 ];
 
 export default function DashboardView({
@@ -52,6 +59,7 @@ export default function DashboardView({
   onReset: () => void;
   savedAt?: string | null;
 }) {
+  const { profile, setProfile } = useSession();
   const [tab, setTab] = useState("today");
   const context = useMemo(() => buildContext(data), [data]);
   const meta = `${data.dateRange?.start} 至 ${data.dateRange?.end} · ${data.daily.length} 天`;
@@ -69,6 +77,15 @@ export default function DashboardView({
       {tab === "ask" && (
         <Section title="问 AI" sub="有什么看不懂的直接问，它知道你这份数据。">
           <Chat context={context} />
+        </Section>
+      )}
+      {tab === "body" && (
+        <Section title="我的身体" sub="身高体重改了随时来更新，下面的计算会跟着变。">
+          <ProfileForm
+            profile={profile}
+            onSaved={setProfile}
+            suggestedWeight={lastOf(data, (d) => d.weight)}
+          />
         </Section>
       )}
       <footer className="mt-10 space-y-1.5 pb-6 text-center text-xs text-zinc-400">

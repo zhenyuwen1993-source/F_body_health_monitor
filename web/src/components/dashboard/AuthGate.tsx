@@ -2,10 +2,14 @@
 
 import { createContext, useCallback, useContext, useEffect, useState } from "react";
 import AuthPanel, { type QuotaInfo, type SessionUser } from "./AuthPanel";
+import ProfileForm, { type ProfileData } from "./ProfileForm";
+import { isComplete } from "@/lib/health/body";
 
 interface SessionValue {
   user: SessionUser;
   quota: QuotaInfo | null;
+  profile: ProfileData;
+  setProfile: (p: ProfileData) => void;
   refreshQuota: () => void;
   signOut: () => Promise<void>;
 }
@@ -26,6 +30,8 @@ export function useSession(): SessionValue {
 export default function AuthGate({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<SessionUser | null>(null);
   const [quota, setQuota] = useState<QuotaInfo | null>(null);
+  const [profile, setProfile] = useState<ProfileData | null>(null);
+  const [skippedProfile, setSkippedProfile] = useState(false);
   const [checking, setChecking] = useState(true);
 
   useEffect(() => {
@@ -34,8 +40,14 @@ export default function AuthGate({ children }: { children: React.ReactNode }) {
       try {
         const j = await (await fetch("/api/auth")).json();
         if (cancelled) return;
-        if (j.user) setUser(j.user);
-        if (j.quota) setQuota(j.quota);
+        if (j.user) {
+          setUser(j.user);
+          if (j.quota) setQuota(j.quota);
+          const pr = await fetch("/api/profile")
+            .then((r) => r.json())
+            .catch(() => null);
+          if (!cancelled && pr?.profile) setProfile(pr.profile);
+        }
       } catch {
         // Offline or server down — treated as signed out.
       } finally {
@@ -62,6 +74,8 @@ export default function AuthGate({ children }: { children: React.ReactNode }) {
     }).catch(() => {});
     setUser(null);
     setQuota(null);
+    setProfile(null);
+    setSkippedProfile(false);
   }, []);
 
   if (checking) {
@@ -95,14 +109,58 @@ export default function AuthGate({ children }: { children: React.ReactNode }) {
           onSignedIn={(u, q) => {
             setUser(u);
             if (q) setQuota(q);
+            fetch("/api/profile")
+              .then((r) => r.json())
+              .then((j) => j.profile && setProfile(j.profile))
+              .catch(() => {});
           }}
         />
       </div>
     );
   }
 
+  // Height and weight unlock BMI, basal metabolism and heart-rate zones, so we
+  // ask once up front — but never block someone who'd rather get on with it.
+  if (profile && !isComplete(profile) && !skippedProfile) {
+    return (
+      <div className="mx-auto flex min-h-full max-w-lg flex-col justify-center gap-6 px-5 py-16">
+        <div>
+          <h1 className="text-2xl font-semibold tracking-tight text-zinc-900 dark:text-zinc-50">
+            先说说你的身体
+          </h1>
+          <p className="mt-2 text-sm leading-6 text-zinc-500">
+            身高体重是手表数据里没有的，填一次就够了。有了它才能算 BMI、基础代谢和运动强度区间。
+          </p>
+        </div>
+        <div className="rounded-xl border border-zinc-200 bg-white p-5 dark:border-zinc-800 dark:bg-zinc-900">
+          <ProfileForm
+            profile={profile}
+            compact
+            onSaved={(p) => setProfile(p)}
+            onSkip={() => setSkippedProfile(true)}
+          />
+        </div>
+      </div>
+    );
+  }
+
   return (
-    <SessionContext.Provider value={{ user, quota, refreshQuota, signOut }}>
+    <SessionContext.Provider
+      value={{
+        user,
+        quota,
+        profile: profile ?? {
+          heightCm: null,
+          weightKg: null,
+          bodyFatPct: null,
+          birthYear: null,
+          sex: null,
+        },
+        setProfile,
+        refreshQuota,
+        signOut,
+      }}
+    >
       {children}
     </SessionContext.Provider>
   );
