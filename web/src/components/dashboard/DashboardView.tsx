@@ -46,9 +46,11 @@ const TABS: TabDef[] = [
 export default function DashboardView({
   data,
   onReset,
+  savedAt,
 }: {
   data: HealthDataset;
   onReset: () => void;
+  savedAt?: string | null;
 }) {
   const [tab, setTab] = useState("today");
   const context = useMemo(() => buildContext(data), [data]);
@@ -69,9 +71,23 @@ export default function DashboardView({
           <Chat context={context} />
         </Section>
       )}
-      <footer className="mt-10 space-y-1 pb-6 text-center text-xs text-zinc-400">
+      <footer className="mt-10 space-y-1.5 pb-6 text-center text-xs text-zinc-400">
         <p>{DISCLAIMER_SHORT}</p>
-        <p>健康数据只在你的浏览器里处理，刷新页面即清除。</p>
+        <p>
+          导出文件本身不会上传，只在你的设备上解析；解析出来的每日指标保存在你的账号下，
+          这样下次打开不用重传。
+          {savedAt && ` 上次更新：${savedAt.slice(0, 10)}`}
+        </p>
+        <button
+          onClick={async () => {
+            if (!confirm("确定删除保存在服务器上的健康数据？训练计划不受影响。")) return;
+            await fetch("/api/health", { method: "DELETE" }).catch(() => {});
+            location.reload();
+          }}
+          className="underline underline-offset-2 hover:text-red-600"
+        >
+          删除我保存在服务器上的数据
+        </button>
       </footer>
     </Shell>
   );

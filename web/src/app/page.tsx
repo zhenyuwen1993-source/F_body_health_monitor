@@ -32,7 +32,7 @@ export default function Home() {
             <path d="M5 12h14m0 0l-6-6m6 6l-6 6" strokeLinecap="round" strokeLinejoin="round" />
           </svg>
         </Link>
-        <p className="text-xs text-zinc-400">数据只在你自己的设备上处理，不会上传，也不用注册</p>
+        <p className="text-xs text-zinc-400">导出文件只在你自己的设备上解析，不会上传</p>
       </main>
     </div>
   );
