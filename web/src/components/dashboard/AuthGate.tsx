@@ -31,7 +31,20 @@ export default function AuthGate({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<SessionUser | null>(null);
   const [quota, setQuota] = useState<QuotaInfo | null>(null);
   const [profile, setProfile] = useState<ProfileData | null>(null);
-  const [skippedProfile, setSkippedProfile] = useState(false);
+  // "以后再填" must survive reloads, or every visit re-asks for height/weight.
+  const [skippedProfile, setSkippedProfile] = useState(() => {
+    try {
+      return typeof window !== "undefined" && localStorage.getItem("striortus:profileSkip") === "1";
+    } catch {
+      return false;
+    }
+  });
+  const skipProfile = () => {
+    setSkippedProfile(true);
+    try {
+      localStorage.setItem("striortus:profileSkip", "1");
+    } catch {}
+  };
   const [checking, setChecking] = useState(true);
 
   useEffect(() => {
@@ -76,6 +89,9 @@ export default function AuthGate({ children }: { children: React.ReactNode }) {
     setQuota(null);
     setProfile(null);
     setSkippedProfile(false);
+    try {
+      localStorage.removeItem("striortus:profileSkip");
+    } catch {}
   }, []);
 
   if (checking) {
@@ -137,7 +153,7 @@ export default function AuthGate({ children }: { children: React.ReactNode }) {
             profile={profile}
             compact
             onSaved={(p) => setProfile(p)}
-            onSkip={() => setSkippedProfile(true)}
+            onSkip={skipProfile}
           />
         </div>
       </div>

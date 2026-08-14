@@ -70,6 +70,8 @@ export interface DailyMetrics {
   weight?: number; // kg
   body_fat?: number; // percent
   mindful?: number; // minutes
+  wrist_temp?: number; // °C, sleeping wrist temperature (relative signal)
+  resp_rate?: number; // breaths/min during sleep
   // sleep (in hours)
   sleep_asleep?: number;
   sleep_inbed?: number;

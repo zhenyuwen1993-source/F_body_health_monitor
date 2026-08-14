@@ -2,6 +2,8 @@
 
 import { useMemo, useState } from "react";
 import AiAnalysis from "@/components/dashboard/AiAnalysis";
+import AlertCard from "@/components/dashboard/AlertCard";
+import JournalCard from "@/components/dashboard/JournalCard";
 import Chat from "@/components/dashboard/Chat";
 import FitnessSection from "@/components/dashboard/FitnessSection";
 import Gauge from "@/components/dashboard/Gauge";
@@ -28,6 +30,7 @@ import {
   strainVerdict,
   tsbVerdict,
 } from "@/lib/health/interpret";
+import { bodyAlert } from "@/lib/health/alerts";
 
 const TABS: TabDef[] = [
   {
@@ -116,6 +119,7 @@ function TodayTab({ data, context }: { data: HealthDataset; context: string }) {
   const today = data.daily[data.daily.length - 1];
   const base = data.baselines;
   const summary = useMemo(() => dailySummary(data), [data]);
+  const alert = useMemo(() => bodyAlert(data), [data]);
 
   // Exports usually happen mid-day, so the final day is partial: fall back to
   // the most recent day that has each value, and label which day that was.
@@ -144,6 +148,12 @@ function TodayTab({ data, context }: { data: HealthDataset; context: string }) {
         level={summary.level}
         date={today.date}
       />
+
+      <AlertCard alert={alert} />
+
+      <Section title="记一笔" sub="生活里发生了什么，只有你自己知道——点一下，剩下的交给数据。">
+        <JournalCard data={data} />
+      </Section>
 
       <Section title="AI 深度解读" sub="把几个指标串起来看，给出今天该怎么做。">
         <AiAnalysis context={context} />

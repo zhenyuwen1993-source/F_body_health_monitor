@@ -24,6 +24,8 @@ const TYPE_MAP: Record<string, string> = {
   HKQuantityTypeIdentifierBodyMass: "weight",
   HKQuantityTypeIdentifierBodyFatPercentage: "body_fat",
   HKCategoryTypeIdentifierMindfulSession: "mindful",
+  HKQuantityTypeIdentifierAppleSleepingWristTemperature: "wrist_temp",
+  HKQuantityTypeIdentifierRespiratoryRate: "resp_rate",
   HKQuantityTypeIdentifierHeadphoneAudioExposure: "headphone",
   HKCategoryTypeIdentifierStateOfMind: "state_of_mind",
 };
@@ -36,7 +38,15 @@ const CUMULATIVE = new Set([
   "basal_energy",
   "exercise",
 ]);
-const MEAN_KEYS = new Set(["heart_rate", "walking_hr", "hrv", "spo2", "headphone"]);
+const MEAN_KEYS = new Set([
+  "heart_rate",
+  "walking_hr",
+  "hrv",
+  "spo2",
+  "headphone",
+  "wrist_temp",
+  "resp_rate",
+]);
 const MEDIAN_KEYS = new Set(["resting_hr", "weight", "body_fat"]);
 
 function sourcePriority(name: string): number {
@@ -226,6 +236,7 @@ export function aggregateDaily(records: HealthRecord[]): DailyMetrics[] {
     if (key === "weight")
       amount = r.unit === "lb" || r.unit === "lbs" ? fval * 0.453592 : fval;
     if (key === "body_fat") amount = fval <= 1 ? fval * 100 : fval;
+    if (key === "wrist_temp" && (r.unit === "degF" || fval > 45)) amount = ((fval - 32) * 5) / 9;
 
     if (CUMULATIVE.has(key)) {
       let bySrc = a.cum.get(key);
