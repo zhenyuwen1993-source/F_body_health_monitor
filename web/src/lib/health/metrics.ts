@@ -3,7 +3,7 @@
 // Ported from src/metrics/{training_load,readiness,triad,compute}.py.
 
 import { minutesFromMidnight } from "./aggregate";
-import type { Baselines, DailyMetrics, WorkoutRecord } from "./types";
+import type { Baselines, DailyMetrics, DaySamples, WorkoutRecord } from "./types";
 
 const clamp = (v: number, lo = 0, hi = 100) => Math.min(hi, Math.max(lo, v));
 const round = (v: number, dp = 0) => {
@@ -81,6 +81,55 @@ function emaSeries(values: number[], tau: number): number[] {
   return out;
 }
 
+// --- WHOOP-style strain from intraday heart rate (Banister TRIMP) ------------
+// Ported from the original Python triad module: per-segment TRIMP over the
+// day's HR samples, blended with a METs-based effort load, on a 0-21 log scale.
+
+function trimpToStrain(trimp: number, scale: number): number {
+  return round(21 * (1 - Math.exp(-Math.max(0, trimp) / scale)), 2);
+}
+
+function banisterSegment(dtMin: number, hr: number, rhr: number, hrMax: number): number {
+  if (hrMax <= rhr || dtMin <= 0) return 0;
+  const hrr = Math.min(1, Math.max(0, (hr - rhr) / (hrMax - rhr)));
+  return dtMin * hrr * 0.64 * Math.exp(1.92 * hrr);
+}
+
+function strainFromHr(samples: [number, number][], rhr: number, hrMax: number): number | undefined {
+  if (samples.length < 5) return undefined;
+  let trimp = 0;
+  for (let i = 1; i < samples.length; i++) {
+    let dt = (samples[i][0] - samples[i - 1][0]) / 60_000;
+    if (dt > 30) continue; // gap — watch off the wrist
+    if (dt > 10) dt = 10;
+    trimp += banisterSegment(dt, samples[i - 1][1], rhr, hrMax);
+  }
+  return trimpToStrain(trimp, 180);
+}
+
+function strainFromEffort(samples: [number, number][]): number | undefined {
+  if (samples.length < 5) return undefined;
+  let load = 0;
+  for (let i = 1; i < samples.length; i++) {
+    let dt = (samples[i][0] - samples[i - 1][0]) / 60_000;
+    const mets = samples[i - 1][1];
+    if (mets < 3 || dt <= 0 || dt > 20) continue;
+    if (dt > 5) dt = 5;
+    load += (mets - 1.5) * dt * 0.35;
+  }
+  return trimpToStrain(load, 260);
+}
+
+/** hr_max: observed day maximum if credible, else age formula, else 190. */
+function estimateHrMax(observedMax: number | undefined, birthYear?: number): number {
+  if (observedMax != null && observedMax > 140) return Math.max(observedMax, 160);
+  if (birthYear) {
+    const age = new Date().getFullYear() - birthYear;
+    if (age >= 10 && age <= 90) return 220 - age;
+  }
+  return 190;
+}
+
 // --- Sleep consistency (circular stats) --------------------------------------
 
 function circularMean(vals: number[], period = 1440): number | undefined {
@@ -137,6 +186,8 @@ function scoreFromBaseline(
 export function enrich(
   daily: DailyMetrics[],
   workouts: WorkoutRecord[],
+  samples?: Map<string, DaySamples>,
+  birthYear?: number,
 ): { daily: DailyMetrics[]; baselines: Baselines } {
   if (!daily.length) return { daily, baselines: {} };
   const loadByDay = dailyLoad(workouts);
@@ -179,9 +230,33 @@ export function enrich(
     exercise: median(daily.map((d) => d.exercise).filter(nn)),
   };
 
+  // One hr-max for the whole dataset, from the highest credible sample.
+  let observedMax: number | undefined;
+  if (samples) {
+    for (const s of samples.values())
+      for (const [, v] of s.hr) if (observedMax == null || v > observedMax) observedMax = v;
+  }
+  const hrMax = estimateHrMax(observedMax, birthYear);
+
   daily.forEach((d, i) => {
     const load = loads[i];
-    d.strain = round(clamp(load / 8 + (d.steps ?? 0) / 2500, 0, 21), 1);
+
+    // Strain: real TRIMP when the day has heart-rate samples; METs effort as
+    // a secondary signal; the old steps proxy only when neither exists.
+    const day = samples?.get(d.date);
+    const rhr = d.resting_hr ?? base.rhr ?? 60;
+    const sHr = day ? strainFromHr(day.hr, rhr, hrMax) : undefined;
+    const sPe = day ? strainFromEffort(day.pe) : undefined;
+    if (sHr != null && day) {
+      const w = day.hr.length >= 80 ? 0.92 : 0.8;
+      d.strain = round(sPe != null ? w * sHr + (1 - w) * sPe : sHr, 1);
+    } else if (sPe != null && sPe > 0) {
+      d.strain = round(sPe, 1);
+    } else if (load > 0) {
+      d.strain = trimpToStrain(load * 1.2, 160);
+    } else {
+      d.strain = round(clamp(load / 8 + (d.steps ?? 0) / 2500, 0, 21), 1);
+    }
 
     const sleepH = d.sleep_asleep ?? d.sleep_inbed;
     let sleepScore = scoreFromBaseline(sleepH, base.sleep, true);

@@ -72,6 +72,11 @@ export interface DailyMetrics {
   mindful?: number; // minutes
   wrist_temp?: number; // °C, sleeping wrist temperature (relative signal)
   resp_rate?: number; // breaths/min during sleep
+  vo2max?: number; // ml/kg/min, Apple cardio fitness
+  hr_recovery?: number; // bpm drop one minute after exercise
+  daylight_min?: number; // minutes of daylight exposure
+  ride_km?: number; // cycling distance
+  swim_km?: number; // swimming distance
   // sleep (in hours)
   sleep_asleep?: number;
   sleep_inbed?: number;
@@ -102,6 +107,14 @@ export interface Baselines {
   steps?: number;
   active?: number;
   exercise?: number;
+}
+
+/** Intraday samples kept aside for TRIMP-style strain. */
+export interface DaySamples {
+  /** heart-rate samples as [epochMs, bpm], sorted by time */
+  hr: [number, number][];
+  /** physical-effort samples as [epochMs, METs] */
+  pe: [number, number][];
 }
 
 /** The full parsed dataset, ready for the dashboard. */

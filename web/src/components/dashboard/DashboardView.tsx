@@ -21,7 +21,9 @@ import {
   type Verdict,
   consistencyVerdict,
   dailySummary,
+  hrRecoveryVerdict,
   hrvVerdict,
+  vo2maxVerdict,
   readinessVerdict,
   recoveryVerdict,
   rhrVerdict,
@@ -116,6 +118,7 @@ export default function DashboardView({
 // --- Tabs --------------------------------------------------------------------
 
 function TodayTab({ data, context }: { data: HealthDataset; context: string }) {
+  const { profile } = useSession();
   const today = data.daily[data.daily.length - 1];
   const base = data.baselines;
   const summary = useMemo(() => dailySummary(data), [data]);
@@ -138,7 +141,9 @@ function TodayTab({ data, context }: { data: HealthDataset; context: string }) {
   const cons = latest((d) => d.sleep_consistency);
   const hrv = latest((d) => d.hrv);
   const rhr = latest((d) => d.resting_hr);
+  const vo2 = latest((d) => d.vo2max);
   const sleepDay = data.daily.find((d) => d.date === sleep.day);
+  const age = profile.birthYear ? new Date().getFullYear() - profile.birthYear : null;
 
   return (
     <div className="space-y-8">
@@ -220,6 +225,13 @@ function TodayTab({ data, context }: { data: HealthDataset; context: string }) {
             verdict={stepsVerdict(today.steps, base.steps)}
           />
           <MetricCard metricKey="tsb" value={today.tsb} verdict={tsbVerdict(today.tsb)} />
+          <MetricCard
+            metricKey="vo2max"
+            value={vo2.value}
+            unit="ml/kg/min"
+            verdict={vo2maxVerdict(vo2.value, profile.sex, age)}
+            asOf={asOf(vo2)}
+          />
         </div>
       </Section>
 
@@ -277,6 +289,13 @@ function TrendsTab({ data }: { data: HealthDataset }) {
           <MetricCard metricKey="weight_kg" value={lastOf(data, (d) => d.weight)} unit="kg" />
           <MetricCard metricKey="mood_score" value={today.mood} unit="/5" />
           <MetricCard metricKey="ctl" value={today.ctl} />
+          <MetricCard
+            metricKey="hr_recovery"
+            value={lastOf(data, (d) => d.hr_recovery)}
+            unit="次/分"
+            verdict={hrRecoveryVerdict(lastOf(data, (d) => d.hr_recovery))}
+          />
+          <MetricCard metricKey="daylight_min" value={today.daylight_min} unit="分钟" />
         </div>
       </Section>
     </div>

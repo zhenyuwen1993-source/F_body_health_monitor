@@ -4,7 +4,7 @@
 // original: we do NOT apply the hardcoded DATA_START_DATE cutoff (that constant
 // was specific to one person's export); a multi-user product keeps all days.
 
-import type { DailyMetrics, HealthRecord } from "./types";
+import type { DailyMetrics, DaySamples, HealthRecord } from "./types";
 
 // HK identifier -> friendly key
 const TYPE_MAP: Record<string, string> = {
@@ -26,6 +26,13 @@ const TYPE_MAP: Record<string, string> = {
   HKCategoryTypeIdentifierMindfulSession: "mindful",
   HKQuantityTypeIdentifierAppleSleepingWristTemperature: "wrist_temp",
   HKQuantityTypeIdentifierRespiratoryRate: "resp_rate",
+  HKQuantityTypeIdentifierVO2Max: "vo2max",
+  HKQuantityTypeIdentifierHeartRateRecoveryOneMinute: "hr_recovery",
+  HKQuantityTypeIdentifierTimeInDaylight: "daylight",
+  HKQuantityTypeIdentifierEnvironmentalAudioExposure: "environmental",
+  HKQuantityTypeIdentifierPhysicalEffort: "physical_effort",
+  HKQuantityTypeIdentifierDistanceCycling: "ride",
+  HKQuantityTypeIdentifierDistanceSwimming: "swim",
   HKQuantityTypeIdentifierHeadphoneAudioExposure: "headphone",
   HKCategoryTypeIdentifierStateOfMind: "state_of_mind",
 };
@@ -37,6 +44,9 @@ const CUMULATIVE = new Set([
   "active_energy",
   "basal_energy",
   "exercise",
+  "daylight",
+  "ride",
+  "swim",
 ]);
 const MEAN_KEYS = new Set([
   "heart_rate",
@@ -44,9 +54,12 @@ const MEAN_KEYS = new Set([
   "hrv",
   "spo2",
   "headphone",
+  "environmental",
   "wrist_temp",
   "resp_rate",
+  "vo2max",
 ]);
+const MAX_KEYS = new Set(["hr_recovery"]);
 const MEDIAN_KEYS = new Set(["resting_hr", "weight", "body_fat"]);
 
 function sourcePriority(name: string): number {
@@ -167,9 +180,18 @@ function stateOfMindScore(rec: HealthRecord): number | undefined {
   return undefined;
 }
 
-/** Build sorted daily metrics from raw records. */
-export function aggregateDaily(records: HealthRecord[]): DailyMetrics[] {
+/** Build sorted daily metrics from raw records, plus intraday HR/effort samples. */
+export function aggregateDaily(records: HealthRecord[]): {
+  daily: DailyMetrics[];
+  samples: Map<string, DaySamples>;
+} {
   const days = new Map<string, DayAccum>();
+  const samples = new Map<string, DaySamples>();
+  const sampleOf = (d: string) => {
+    let x = samples.get(d);
+    if (!x) samples.set(d, (x = { hr: [], pe: [] }));
+    return x;
+  };
   const get = (d: string) => {
     let a = days.get(d);
     if (!a) days.set(d, (a = newAccum()));
@@ -209,6 +231,14 @@ export function aggregateDaily(records: HealthRecord[]): DailyMetrics[] {
 
     const a = get(r.startDay);
 
+    if (key === "heart_rate" && !isNaN(fval)) {
+      sampleOf(r.startDay).hr.push([r.startDate.getTime(), fval]);
+    }
+    if (key === "physical_effort") {
+      if (!isNaN(fval)) sampleOf(r.startDay).pe.push([r.startDate.getTime(), fval]);
+      continue; // intraday only; no daily column
+    }
+
     if (key === "state_of_mind") {
       const s = stateOfMindScore(r);
       if (s != null) a.moodScores.push(s);
@@ -226,7 +256,7 @@ export function aggregateDaily(records: HealthRecord[]): DailyMetrics[] {
     if (isNaN(fval)) continue;
 
     let amount = fval;
-    if (key === "distance")
+    if (key === "distance" || key === "ride" || key === "swim")
       amount =
         r.unit === "m" || r.unit === "meter" || r.unit === "meters" || fval > 100
           ? fval / 1000
@@ -238,6 +268,11 @@ export function aggregateDaily(records: HealthRecord[]): DailyMetrics[] {
     if (key === "body_fat") amount = fval <= 1 ? fval * 100 : fval;
     if (key === "wrist_temp" && (r.unit === "degF" || fval > 45)) amount = ((fval - 32) * 5) / 9;
 
+    if (MAX_KEYS.has(key)) {
+      const arr = a.medians.get(key) ?? a.medians.set(key, []).get(key)!;
+      arr.push(amount);
+      continue;
+    }
     if (CUMULATIVE.has(key)) {
       let bySrc = a.cum.get(key);
       if (!bySrc) a.cum.set(key, (bySrc = new Map()));
@@ -254,15 +289,16 @@ export function aggregateDaily(records: HealthRecord[]): DailyMetrics[] {
     const d: DailyMetrics = { date };
     for (const [key, bySrc] of a.cum) {
       const v = pickPreferred(bySrc);
-      if (v != null) (d as unknown as Record<string, number>)[key] = round(v, 2);
+      if (v != null) (d as unknown as Record<string, number>)[remap(key)] = round(v, 2);
     }
     for (const [key, xs] of a.means) {
       const v = mean(xs);
       if (v != null) (d as unknown as Record<string, number>)[remap(key)] = round(v, 2);
     }
     for (const [key, xs] of a.medians) {
-      const v = median(xs);
-      if (v != null) (d as unknown as Record<string, number>)[remap(key)] = round(v, 2);
+      const v = MAX_KEYS.has(key) ? Math.max(...xs) : median(xs);
+      if (v != null && Number.isFinite(v))
+        (d as unknown as Record<string, number>)[remap(key)] = round(v, 2);
     }
     const stand = pickPreferred(a.standBySrc);
     if (stand != null) d.stand = stand;
@@ -292,12 +328,22 @@ export function aggregateDaily(records: HealthRecord[]): DailyMetrics[] {
     out.push(d);
   }
   out.sort((a, b) => (a.date < b.date ? -1 : a.date > b.date ? 1 : 0));
-  return out;
+  for (const s of samples.values()) {
+    s.hr.sort((x, y) => x[0] - y[0]);
+    s.pe.sort((x, y) => x[0] - y[0]);
+  }
+  return { daily: out, samples };
 }
 
 // mean/median metric keys map to their output column name
+const REMAP: Record<string, string> = {
+  daylight: "daylight_min",
+  ride: "ride_km",
+  swim: "swim_km",
+  environmental: "environmental_db",
+};
 function remap(key: string): string {
-  return key; // our DailyMetrics uses the same friendly keys
+  return REMAP[key] ?? key;
 }
 
 function bestSource(bySource: Map<string, number>): string | undefined {

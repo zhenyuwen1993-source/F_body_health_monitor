@@ -169,6 +169,50 @@ export function tsbVerdict(v: number | undefined): Verdict {
   };
 }
 
+export function vo2maxVerdict(
+  v: number | undefined,
+  sex?: string | null,
+  age?: number | null,
+): Verdict {
+  if (v == null) return { label: "没有记录", level: "unknown" };
+  // Rough population bands (ml/kg/min), nudged by age decade. Watch estimates
+  // skew low for non-runners, so the copy stays gentle.
+  const a = age ?? 35;
+  const shift = Math.max(0, (a - 30) / 10) * 2.5;
+  const female = sex === "female";
+  const lo = (female ? 30 : 35) - shift;
+  const mid = (female ? 37 : 42) - shift;
+  const hi = (female ? 44 : 50) - shift;
+  if (v >= hi)
+    return { label: "心肺很强", detail: "在同龄人里属于优秀水平，说明心肺引擎很好。", level: "good" };
+  if (v >= mid)
+    return { label: "不错", detail: "高于同龄人的平均水平，保持规律有氧就好。", level: "good" };
+  if (v >= lo)
+    return {
+      label: "一般",
+      detail: "在常见范围内。每周多一点快走或慢跑，这个数字会慢慢上去。",
+      level: "ok",
+    };
+  return {
+    label: "偏低",
+    detail: "低于同龄人常见水平。别灰心——它对训练的反应很快，从每周三次快走开始。",
+    level: "warn",
+  };
+}
+
+export function hrRecoveryVerdict(v: number | undefined): Verdict {
+  if (v == null) return { label: "没有记录", level: "unknown" };
+  if (v >= 30) return { label: "恢复很快", detail: "运动后心率降得快，是心脏健康的好信号。", level: "good" };
+  if (v >= 18) return { label: "正常", detail: "运动后一分钟的心率下降在健康范围。", level: "good" };
+  if (v >= 12)
+    return { label: "偏慢", detail: "运动后心率降得比较慢，多做有氧会改善。", level: "ok" };
+  return {
+    label: "明显偏慢",
+    detail: "如果多次都这么慢，值得和医生聊聊心肺健康。",
+    level: "warn",
+  };
+}
+
 // --- Whole-day narrative -----------------------------------------------------
 
 /**
