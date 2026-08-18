@@ -5,6 +5,8 @@ import { LEVEL_COLOR } from "@/lib/health/interpret";
 import { bmi, bmr, bodyFatReading, hrMax, type BodyProfile } from "@/lib/health/body";
 
 export interface ProfileData extends BodyProfile {
+  birthDate?: string | null;
+  birthHour?: number | null;
   updatedAt?: string | null;
 }
 
@@ -32,7 +34,8 @@ export default function ProfileForm({
     profile.weightKg?.toString() ?? suggestedWeight?.toFixed(1) ?? "",
   );
   const [fat, setFat] = useState(profile.bodyFatPct?.toString() ?? "");
-  const [year, setYear] = useState(profile.birthYear?.toString() ?? "");
+  const [date, setDate] = useState(profile.birthDate ?? "");
+  const [hour, setHour] = useState(profile.birthHour?.toString() ?? "");
   const [sex, setSex] = useState<string>(profile.sex ?? "");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -52,7 +55,8 @@ export default function ProfileForm({
           heightCm: height === "" ? undefined : Number(height),
           weightKg: weight === "" ? undefined : Number(weight),
           bodyFatPct: fat === "" ? null : Number(fat),
-          birthYear: year === "" ? null : Number(year),
+          birthDate: date === "" ? null : date,
+          birthHour: hour === "" ? null : Number(hour),
           sex: sex === "" ? null : sex,
         }),
       });
@@ -74,7 +78,7 @@ export default function ProfileForm({
     heightCm: height === "" ? null : Number(height),
     weightKg: weight === "" ? null : Number(weight),
     bodyFatPct: fat === "" ? null : Number(fat),
-    birthYear: year === "" ? null : Number(year),
+    birthYear: date !== "" ? Number(date.slice(0, 4)) : profile.birthYear,
     sex: sex === "" ? null : sex,
   };
   const b = bmi(live);
@@ -114,7 +118,30 @@ export default function ProfileForm({
           placeholder="选填"
           hint="不知道就留空，体脂秤或健身房测的都行"
         />
-        <Field label="出生年份" value={year} onChange={setYear} placeholder="选填，如 1990" />
+        <label className="block">
+          <span className="mb-1.5 block text-xs text-zinc-500">出生日期（选填）</span>
+          <input
+            type="date"
+            value={date}
+            onChange={(e) => setDate(e.target.value)}
+            className="w-full rounded-lg border border-zinc-300 bg-transparent px-3 py-2 text-sm text-zinc-900 outline-none focus:border-emerald-500 dark:border-zinc-700 dark:text-zinc-100"
+          />
+          <span className="mt-1 block text-[11px] text-zinc-400">用于按年龄给参考范围，也用于「传统」页的八字排盘</span>
+        </label>
+        <label className="block">
+          <span className="mb-1.5 block text-xs text-zinc-500">出生时辰（选填）</span>
+          <select
+            value={hour}
+            onChange={(e) => setHour(e.target.value)}
+            className="w-full rounded-lg border border-zinc-300 bg-transparent px-3 py-2 text-sm text-zinc-900 outline-none focus:border-emerald-500 dark:border-zinc-700 dark:bg-white dark:text-zinc-900"
+          >
+            <option value="">不知道</option>
+            {Array.from({ length: 24 }, (_, h) => (
+              <option key={h} value={h}>{`${h}:00 - ${h}:59`}</option>
+            ))}
+          </select>
+          <span className="mt-1 block text-[11px] text-zinc-400">不知道就留空，排盘会少一柱但不影响其他</span>
+        </label>
       </div>
 
       <div>

@@ -59,6 +59,22 @@ export async function POST(req: Request) {
   const weightKg = check("weightKg", body.weightKg);
   const bodyFatPct = check("bodyFatPct", body.bodyFatPct);
   const birthYear = check("birthYear", body.birthYear);
+
+  // Birth date (for the bazi chart). Deriving the year keeps age-based
+  // calculations consistent with it automatically.
+  const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
+  let birthDate: string | null | undefined = undefined;
+  if (body.birthDate === null || body.birthDate === "") birthDate = null;
+  else if (typeof body.birthDate === "string" && DATE_RE.test(body.birthDate)) {
+    const y = Number(body.birthDate.slice(0, 4));
+    if (y >= 1900 && y <= new Date().getFullYear() && body.birthDate <= new Date().toISOString().slice(0, 10))
+      birthDate = body.birthDate;
+  }
+  let birthHour: number | null | undefined = undefined;
+  if (body.birthHour === null || body.birthHour === "") birthHour = null;
+  else if (typeof body.birthHour === "number" && Number.isInteger(body.birthHour) && body.birthHour >= 0 && body.birthHour <= 23)
+    birthHour = body.birthHour;
+
   const sex =
     body.sex === "male" || body.sex === "female" || body.sex === null
       ? (body.sex as string | null)
@@ -69,6 +85,8 @@ export async function POST(req: Request) {
     weightKg === undefined &&
     bodyFatPct === undefined &&
     birthYear === undefined &&
+    birthDate === undefined &&
+    birthHour === undefined &&
     sex === undefined
   ) {
     return Response.json({ error: "没有可保存的内容，或数值超出合理范围。" }, { status: 400 });
@@ -80,11 +98,15 @@ export async function POST(req: Request) {
       heightCm: heightCm ?? undefined,
       weightKg: weightKg ?? undefined,
       bodyFatPct: bodyFatPct ?? undefined,
-      birthYear: birthYear ?? undefined,
+      birthYear: (birthDate ? Number(birthDate.slice(0, 4)) : birthYear) ?? undefined,
+      birthDate: birthDate ?? undefined,
+      birthHour: birthHour ?? undefined,
       sex: sex ?? undefined,
     });
     if (bodyFatPct === null) profile = await clearProfileField(userId, "body_fat_pct");
-    if (birthYear === null) profile = await clearProfileField(userId, "birth_year");
+    if (birthYear === null && birthDate == null) profile = await clearProfileField(userId, "birth_year");
+    if (birthDate === null) profile = await clearProfileField(userId, "birth_date");
+    if (birthHour === null) profile = await clearProfileField(userId, "birth_hour");
     if (sex === null) profile = await clearProfileField(userId, "sex");
     return Response.json({ profile });
   } catch (e) {

@@ -14,6 +14,7 @@ import Shell, { type TabDef } from "@/components/dashboard/Shell";
 import { useSession } from "@/components/dashboard/AuthGate";
 import Sparkline from "@/components/dashboard/Sparkline";
 import SummaryHero from "@/components/dashboard/SummaryHero";
+import TraditionTab from "@/components/dashboard/TraditionTab";
 import { buildContext, type DailyMetrics, type HealthDataset } from "@/lib/health";
 import { DISCLAIMER_SHORT, metricInfo } from "@/lib/health/glossary";
 import {
@@ -49,6 +50,11 @@ const TABS: TabDef[] = [
   { id: "trends", label: "趋势", icon: <Icon d="M3 17l6-6 4 4 7-7M21 8v5h-5" /> },
   { id: "ask", label: "问 AI", icon: <Icon d="M8 10h8M8 14h5M21 12a9 9 0 11-3.5-7.1L21 3v9z" /> },
   {
+    id: "tradition",
+    label: "传统",
+    icon: <Icon d="M12 21a9 9 0 100-18 9 9 0 000 18zm0-18a4.5 4.5 0 010 9 4.5 4.5 0 000 9M12 6.75h.01M12 17.25h.01" />,
+  },
+  {
     id: "body",
     label: "我的身体",
     icon: <Icon d="M12 6a2 2 0 100-4 2 2 0 000 4zM12 6v7m0 0l-3 8m3-8l3 8M7 9l5-1 5 1" />,
@@ -82,6 +88,11 @@ export default function DashboardView({
       {tab === "ask" && (
         <Section title="问 AI" sub="有什么看不懂的直接问，它知道你这份数据。">
           <Chat context={context} />
+        </Section>
+      )}
+      {tab === "tradition" && (
+        <Section title="传统养生" sub="八字与中医只是文化视角，和你的真实数据摆在一起看。">
+          <TraditionTab data={data} onGoBody={() => setTab("body")} />
         </Section>
       )}
       {tab === "body" && (
